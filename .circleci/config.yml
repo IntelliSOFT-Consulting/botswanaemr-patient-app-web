@@ -1,0 +1,220 @@
+version: 2.1
+
+jobs:
+
+  build_auth_service:      
+    working_directory: ~/botswanaemr-patient-app-web/BotswanaEMRAuthentication
+    docker:
+      - image: cimg/openjdk:17.0.1
+
+    environment:
+      MAVEN_OPTS: -Xmx3200m
+
+    steps:
+      - setup_remote_docker
+      - checkout:
+          path: ~/botswanaemr-patient-app-web
+      - when:
+          condition:
+           equal: [ development-backend, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Build with Maven
+                command: mvn install
+            - run:
+                name: Build Docker Image and Push to Docker Hub
+                command: |
+                  docker buildx create --use --name workflowBuilder
+                  echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNMAE" --password-stdin
+                  docker buildx build --platform=linux/amd64,linux/arm64 -t "$DOCKER_USERNMAE"/botswana_emr_auth_image:v3 --push .
+                  docker logout
+
+
+  build_file_storage:
+    working_directory: ~/botswanaemr-patient-app-web/BotswanaEMRFileStorage
+    docker:
+      - image: cimg/openjdk:17.0.1
+
+    environment:
+      MAVEN_OPTS: -Xmx3200m
+
+    steps:
+      - setup_remote_docker
+      - checkout:
+          path: ~/botswanaemr-patient-app-web
+      - when:
+          condition:
+           equal: [ development-backend, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Build with Maven
+                command: mvn install
+            - run:
+                name: Build Docker Image and Push to Docker Hub
+                command: |
+                  
+                  docker buildx create --use --name workflowBuilder
+                  echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNMAE" --password-stdin
+                  docker buildx build --platform=linux/amd64,linux/arm64 -t "$DOCKER_USERNMAE"/botswana_emr_file_storage_image:2 --push .
+                  docker logout                  
+
+
+  build_ambulance_service:
+    working_directory: ~/botswanaemr-patient-app-web/BotswanaEMRAmbulance
+    docker:
+      - image: cimg/openjdk:17.0.1
+
+    environment:
+      MAVEN_OPTS: -Xmx3200m
+
+    steps:
+      - setup_remote_docker
+      - checkout:
+          path: ~/botswanaemr-patient-app-web
+      - when:
+          condition:
+           equal: [ development-backend, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Build with Maven
+                command: mvn install
+            - run:
+                name: Build Docker Image and Push to Docker Hub
+                command: |
+                  
+                  docker buildx create --use --name workflowBuilder
+                  echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNMAE" --password-stdin
+                  docker buildx build --platform=linux/amd64,linux/arm64 -t "$DOCKER_USERNMAE"/botswana_emr_ambulance_image:1 --push .
+                  docker logout
+                  
+
+  build_notification_service:
+    working_directory: ~/botswanaemr-patient-app-web/BotswanaEMRNotifications
+    docker:
+      - image: cimg/openjdk:17.0.1
+
+    environment:
+      MAVEN_OPTS: -Xmx3200m
+
+    steps:
+      - setup_remote_docker
+      - checkout:
+          path: ~/botswanaemr-patient-app-web
+      - when:
+          condition:
+           equal: [ development-backend, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Build with Maven
+                command: mvn install
+            - run:
+                name: Build Docker Image and Push to Docker Hub
+                command: |
+                  docker buildx create --use --name workflowBuilder
+                  echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNMAE" --password-stdin
+                  docker buildx build --platform=linux/amd64,linux/arm64 -t "$DOCKER_USERNMAE"/botswana_emr_notifications_image:1 --push .
+                  docker logout
+           
+
+  build_facility_service:
+    working_directory: ~/botswanaemr-patient-app-web/BotswanaEMRFacility
+    docker:
+      - image: cimg/openjdk:17.0.1
+
+    environment:
+      MAVEN_OPTS: -Xmx3200m
+
+    steps:
+      - setup_remote_docker
+      - checkout:
+          path: ~/botswanaemr-patient-app-web
+      - when:
+          condition:
+           equal: [ development-backend, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Build with Maven
+                command: mvn install
+            - run:
+                name: Build Docker Image and Push to Docker Hub
+                command: |
+                  
+                  docker buildx create --use --name workflowBuilder
+                  echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNMAE" --password-stdin
+                  docker buildx build --platform=linux/amd64,linux/arm64 -t "$DOCKER_USERNMAE"/botswana_emr_facility_image:v3 --push .
+                  docker logout
+                  
+
+
+  build_appointment_service:
+    working_directory: ~/botswanaemr-patient-app-web/BotswanaEMRAppointments
+    docker:
+      - image: cimg/openjdk:17.0.1
+
+    environment:
+      MAVEN_OPTS: -Xmx3200m
+
+    steps:
+      - setup_remote_docker
+      - checkout:
+          path: ~/botswanaemr-patient-app-web
+      - when:
+          condition:
+            equal: [ development-backend, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Build with Maven
+                command: mvn install
+            - run:
+                name: Build Docker Image and Push to Docker Hub
+                command: |
+                  docker buildx create --use --name workflowBuilder
+                  echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNMAE" --password-stdin
+                  docker buildx build --platform=linux/amd64,linux/arm64 -t "$DOCKER_USERNMAE"/botswana_emr_appointments_image:v1 --push .
+                  docker logout
+                  
+
+
+  deploy_services:
+    machine:
+      image: ubuntu-2004:202010-01
+
+    steps:
+      - run: sudo apt install rsync
+      - run: sudo apt-get install sshpass
+      - run:
+          name: SSH into remote server and deploy auth service
+          command: |
+#            sshpass -p "$SERVER_PASSWORD" ssh "$SERVER_URL" 'kubectl delete -f kubernetes/backend/ && kubectl create -f kubernetes/backend/ && sleep 6'
+
+
+
+
+workflows:
+    version: 2
+    build_and_push:
+        jobs:
+        - build_auth_service
+        - build_file_storage
+        - build_ambulance_service
+        - build_notification_service
+        - build_facility_service
+        - build_appointment_service
+        - deploy_services:
+            requires:
+            - build_auth_service
+            - build_file_storage
+            - build_ambulance_service
+            - build_notification_service
+            - build_facility_service
+            - build_appointment_service
+            filters:
+              branches:
+                only: development-backend
+
+
+
+
+
+
+

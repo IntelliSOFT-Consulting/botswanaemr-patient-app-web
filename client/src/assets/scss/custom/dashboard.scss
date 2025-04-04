@@ -1,0 +1,29 @@
+.statCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stat-charts {
+  display: grid;
+  grid-template-columns: 60% 40%;
+  grid-gap: 1rem;
+  margin-bottom: 1rem;
+  width: calc(100% - 1rem);
+
+  .bx--tile {
+    height: 100%;
+  }
+
+  .ct-chart {
+    margin-bottom: 1rem;
+    &::after {
+      content: unset;
+    }
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}

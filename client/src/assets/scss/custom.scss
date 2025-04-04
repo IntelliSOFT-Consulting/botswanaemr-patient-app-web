@@ -1,0 +1,42 @@
+@import './custom/login';
+@import './custom/register';
+@import './custom/dashboard';
+
+svg {
+  span,
+  text {
+    font-size: 12px !important;
+  }
+}
+
+button[aria-label='App Switcher'] {
+  svg {
+    fill: white;
+  }
+  .bx--overflow-menu--open {
+    background-color: #353535;
+    &:hover {
+      background-color: #353535;
+    }
+  }
+  button {
+    &:hover,
+    &:focus {
+      background-color: #353535;
+    }
+  }
+}
+
+.content-expanded,
+.content-mini {
+  margin-top: 4rem;
+  padding-top: 1rem;
+}
+
+.content-expanded {
+  margin-left: 16rem;
+}
+
+.content-mini {
+  margin-left: 3rem;
+}

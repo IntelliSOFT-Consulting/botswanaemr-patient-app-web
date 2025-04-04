@@ -1,0 +1,15 @@
+version: "3.5"
+services:
+  botswana_emr_ambulance:
+    build: .
+    image: dnjau/botswana_emr_ambulance_image:latest
+    container_name: botswanaambulance
+    command: bash -c "java -jar ./botswana_emr_ambulance_java_backend/BotswanaEMRAmbulance.jar"
+    ports:
+      - "7002:7002"
+    volumes:
+      - .:/botswana_emr_ambulance_java_backend
+networks:
+  default:
+    external:
+      name: botswana-emr-network

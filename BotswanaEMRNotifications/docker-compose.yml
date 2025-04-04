@@ -1,0 +1,26 @@
+version: "3.5"
+services:
+  botswana_notification_backend:
+    build: .
+    image: dnjau/botswana_notification_image:latest
+    container_name: botswananotification
+    command: bash -c "java -jar ./botswana_notification_backend/BotswanaEMRNotifications.jar"
+    ports:
+      - "7001:7001"
+    volumes:
+      - .:/botswana_notification_backend
+networks:
+  default:
+    external:
+      name: botswana-emr-network
+
+#    deploy:
+#      update_config:
+#        parallelism: 1
+#        max_failure_ratio: 0
+#        delay: 3s
+#        failure_action: rollback
+#      restart_policy:
+#        max_attempts: 3
+#        condition: on-failure
+#      replicas: 3

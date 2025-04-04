@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  patient-app:
+    stdin_open: true
+    restart: unless-stopped
+    container_name: patient-app
+    build:
+      dockerfile: docker/prod/Dockerfile
+      context: .
+    ports:
+    # Expose port 80 as 8000
+      - "8000:8000"
+

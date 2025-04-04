@@ -1,0 +1,77 @@
+.login-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  height: 100vh;
+  a {
+    text-decoration: none;
+  }
+
+  > div:last-child {
+    background: linear-gradient(to bottom, #0099cc, #98d5e9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    img {
+      width: 13rem;
+    }
+  }
+
+  h3 {
+    margin: 0px;
+  }
+  > div:first-child {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    form {
+      display: flex;
+      flex-direction: column;
+      width: 70%;
+      fieldset {
+        margin-top: 10px;
+      }
+      label,
+      legend {
+        color: rgb(30, 30, 30);
+      }
+      button {
+        margin-top: 1rem;
+        margin-left: auto;
+      }
+      .bx--radio-button:checked
+        + .bx--radio-button__label
+        .bx--radio-button__appearance::before {
+        background-color: white;
+      }
+      .forgot-password-link {
+        margin: 10px 0;
+        margin-left: auto;
+      }
+    }
+    .signup-link {
+      align-self: start !important;
+      margin-top: 1rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    background-image: none;
+    grid-template-columns: 1fr;
+
+    > div {
+      width: 100%;
+      height: 100vh;
+      &:last-child {
+        display: none;
+      }
+    }
+  }
+}
+
+.login-form {
+  > div {
+    margin-top: 1.5rem;
+  }
+}
