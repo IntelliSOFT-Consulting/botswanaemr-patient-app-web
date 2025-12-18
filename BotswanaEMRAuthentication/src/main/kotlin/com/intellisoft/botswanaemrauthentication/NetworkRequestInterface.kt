@@ -18,6 +18,9 @@ interface NetworkRequestInterface {
 
     @GET("v1/patient")
     suspend fun getUserDetails(@Query("q") q: String, @Query("v") v: String):Response<DbOpenMrsResult>
+    
+    @GET("v1/patient")
+    suspend fun getPatientDetailsFull(@Query("q") q: String, @Query("v") v: String):Response<DbOpenMrsPatientResult>
 
     @GET("emrapi/conditionhistory")
     suspend fun getConditions(@Query("patientUuid") patientUuid: String):Response<List<DbConditionsData>>
@@ -30,5 +33,14 @@ interface NetworkRequestInterface {
 
     @GET("v1/order/{order}")
     suspend fun getDrugsDetails(@Path("order") order: String):Response<DbDrugsDetails>
+
+    @GET("v1/obs")
+    suspend fun getVitals(@Query("patient") patient: String, @Query("v") v: String):Response<DbVitalsResults>
+
+    @GET("v1/visit")
+    suspend fun getVisits(@Query("patient") patient: String, @Query("v") v: String):Response<DbVisitResponse>
+
+    @GET("v1/visit/{visit}")
+    suspend fun getVisitById(@Path("visit") visit: String, @Query("v") v: String):Response<DbVisitRaw>
 
 }

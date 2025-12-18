@@ -13,5 +13,6 @@ public interface PatientDetailsRepository extends JpaRepository<PatientDetails, 
     PatientDetails findByUserKeycloakId(String keycloakId);
 
     Boolean existsByPatientIdentificationNo(String pin);
+    PatientDetails findByNationalPassportNo(String nationalPassportNo);
 
 }

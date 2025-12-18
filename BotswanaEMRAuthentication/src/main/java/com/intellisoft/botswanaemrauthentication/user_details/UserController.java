@@ -19,6 +19,7 @@ public class UserController {
     @Autowired
     private PatientDetailsService patientDetailsService;
     FormatterClass formatterClass = new FormatterClass();
+
     @GetMapping(value = "details")
     public ResponseEntity<?> getUserDetails(){
 
@@ -41,8 +42,6 @@ public class UserController {
 
         }
 
-
-
     }
 
     @PutMapping(value = "details")
@@ -64,7 +63,6 @@ public class UserController {
             Results results = new Results(400, "Please check if you have provided a profile picture.");
             return ResponseEntity.badRequest().body(results);
         }
-
 
     }
 
@@ -144,7 +142,9 @@ public class UserController {
 
         }
 
-    }/**
+    }
+
+    /**
      * Get Drugs Details
      */
     @GetMapping(value = "drugs/{drugId}")
@@ -165,6 +165,58 @@ public class UserController {
         }catch (Exception e){
             Results results = new Results(400,
                     " Please try again after sometime.");
+            return formatterClass.getResponse(results);
+
+        }
+
+    }
+
+    /**
+     * Get Visits
+     */
+    @GetMapping(value = "visits")
+    public ResponseEntity<?> getVisits(){
+
+        Optional<String> userId = formatterClass.getCurrentUserLogin();
+
+        try {
+
+            Results results;
+            if (userId.isPresent()){
+                results = patientDetailsService.getVisits(userId.get());
+            }else {
+                results = new Results(400, "We could not find the user");
+            }
+            return formatterClass.getResponse(results);
+
+        }catch (Exception e){
+            Results results = new Results(400, " Please try again after sometime: " + e.toString());
+            return formatterClass.getResponse(results);
+
+        }
+
+    }
+
+    /**
+     * Get Visit details
+     */
+    @GetMapping(value = "visit/{visitId}")
+    public ResponseEntity<?> getVisitById(@PathVariable("visitId") String visitId){
+
+        Optional<String> userId = formatterClass.getCurrentUserLogin();
+
+        try {
+
+            Results results;
+            if (userId.isPresent()){
+                results = patientDetailsService.getVisitById(userId.get(), visitId);
+            }else {
+                results = new Results(400, "We could not find the user");
+            }
+            return formatterClass.getResponse(results);
+
+        }catch (Exception e){
+            Results results = new Results(400, " Please try again after sometime: " + e.toString());
             return formatterClass.getResponse(results);
 
         }

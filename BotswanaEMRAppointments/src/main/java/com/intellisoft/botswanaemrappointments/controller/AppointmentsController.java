@@ -62,10 +62,15 @@ public class AppointmentsController {
             if (userDetails != null) {
 
                 String patientId = userDetails.getOpenMrsId();
-                List<DbTimeSlotData> slotsResponse = timeSlotService.fetchTimeSlots(limit, patientId, appointmentType);
-                DbReturnDetails dbReturnDetails = new DbReturnDetails(slotsResponse.size(), slotsResponse);
+                
+                if (patientId == null || patientId.isEmpty()) {
+                    results = new Results(200, new DbReturnDetails(0, new java.util.ArrayList<>()));
+                } else {
+                    List<DbTimeSlotData> slotsResponse = timeSlotService.fetchTimeSlots(limit, patientId, appointmentType);
+                    DbReturnDetails dbReturnDetails = new DbReturnDetails(slotsResponse.size(), slotsResponse);
 
-                results = new Results(200, dbReturnDetails);
+                    results = new Results(200, dbReturnDetails);
+                }
 
 
             }else{
@@ -123,6 +128,12 @@ public class AppointmentsController {
             if (userDetails != null) {
 
                 String openMrsId = userDetails.getOpenMrsId();
+                
+                if (openMrsId == null || openMrsId.isEmpty()) {
+                    results = new Results(200, new DbMyAppointments(null, null));
+                    return formatterClass.getResponse(results);
+                }
+                
                 Map<String, String> params = new LinkedHashMap<>();
 
                 if (limit != null ) params.put("limit", limit);
@@ -170,6 +181,12 @@ public class AppointmentsController {
             if (userDetails != null) {
 
                 String openMrsId = userDetails.getOpenMrsId();
+                
+                if (openMrsId == null || openMrsId.isEmpty()) {
+                    results = new Results(200, new Appointment(0, new java.util.ArrayList<>()));
+                    return formatterClass.getResponse(results);
+                }
+                
                 Map<String, String> params = new LinkedHashMap<>();
 
                 if (limit != null ) params.put("limit", limit);
@@ -209,6 +226,12 @@ public class AppointmentsController {
             if (userDetails != null){
 
                 String openMrsId = userDetails.getOpenMrsId();
+                
+                if (openMrsId == null || openMrsId.isEmpty()) {
+                    results = new Results(400, "Linking has not been done");
+                    return formatterClass.getResponse(results);
+                }
+                
                 AppointmentReq appointmentReq = new AppointmentReq(
                         dbScheduleNewAppointment.getAppointmentType(),
                         openMrsId,
@@ -261,7 +284,11 @@ public class AppointmentsController {
             if (userDetails != null) {
 
                 String openMrsId = userDetails.getOpenMrsId();
-
+                
+                if (openMrsId == null || openMrsId.isEmpty()) {
+                    results = new Results(400, "Linking has not been done");
+                    return formatterClass.getResponse(results);
+                }
 
                 String appointmentType = dbRequestAppointment.getAppointmentType();
                 String notes = dbRequestAppointment.getNotes();
@@ -313,13 +340,59 @@ public class AppointmentsController {
     }
 
 
+    //Get visit history - visits linked to completed appointments
+    @GetMapping(value = "/visit-history")
+    public ResponseEntity<?> getVisitHistory(
+            @RequestParam(value = "fromDate", required = false) String fromDate,
+            @RequestParam(value = "toDate", required = false) String toDate,
+            @RequestParam(value = "limit", required = false) String limit
+    ){
+        Results results;
+        Optional<String> currentUserLogin = formatterClass.getCurrentUserLogin();
+        if (currentUserLogin.isPresent()){
+
+            String patient = currentUserLogin.get();
+            //Get the openMrs Id
+            UserDetails userDetails = getUserDetails(patient);
+
+            if (userDetails != null) {
+
+                String openMrsId = userDetails.getOpenMrsId();
+                
+                if (openMrsId == null || openMrsId.isEmpty()) {
+                    results = new Results(200, new DbVisitHistoryResponse(0, new java.util.ArrayList<>()));
+                    return formatterClass.getResponse(results);
+                }
+                
+                Map<String, String> params = new LinkedHashMap<>();
+
+                if (limit != null) params.put("limit", limit);
+                if (fromDate != null) params.put("fromDate", fromDate);
+                if (toDate != null) params.put("toDate", toDate);
+
+                params.put("patient", openMrsId);
+
+                results = timeSlotService.getVisitHistory(params);
+                return formatterClass.getResponse(results);
+            }else {
+                results = new Results(400, "We could not find the user");
+            }
+
+        }else {
+            results = new Results(400, "We could not find the user");
+        }
+
+        return formatterClass.getResponse(results);
+    }
+
     //Cancel an appointment
     @PostMapping("/cancel-request-appointment/")
     public ResponseEntity<?> cancelRequestAppointment(
             @RequestParam(value = "appointmentId", required = true) String appointmentId
     ){
 
-        DbCancelAppointment dbCancelAppointment = new DbCancelAppointment(appointmentId, "CANCELLED");
+        DbStatusData statusData = new DbStatusData("CANCELLED");
+        DbCancelAppointment dbCancelAppointment = new DbCancelAppointment(appointmentId, statusData);
 
         Results results = timeSlotService.cancelRequestAppointment(dbCancelAppointment);
         return formatterClass.getResponse(results);
@@ -331,11 +404,94 @@ public class AppointmentsController {
             @RequestParam(value = "appointmentId", required = true) String appointmentId
     ){
 
-        DbCancelAppointment dbCancelAppointment = new DbCancelAppointment(appointmentId, "CANCELLED");
+        DbStatusData statusData = new DbStatusData("CANCELLED");
+        DbCancelAppointment dbCancelAppointment = new DbCancelAppointment(appointmentId, statusData);
 
         Results results = timeSlotService.cancelScheduledAppointment(dbCancelAppointment);
         return formatterClass.getResponse(results);
 
+    }
+
+    //Modify a scheduled appointment
+    @PutMapping("/modify-scheduled-appointment/{appointmentId}")
+    public ResponseEntity<?> modifyScheduledAppointment(
+            @PathVariable("appointmentId") String appointmentId,
+            @RequestBody DbModifyAppointment dbModifyAppointment
+    ){
+
+        Results results;
+        Optional<String> currentUserLogin = formatterClass.getCurrentUserLogin();
+        if (currentUserLogin.isPresent()){
+
+            UserDetails userDetails = getUserDetails(currentUserLogin.get());
+
+            if (userDetails != null){
+
+                results = timeSlotService.modifyScheduledAppointment(appointmentId, dbModifyAppointment);
+                int statusCode = results.getCode();
+                if (statusCode == 200) {
+
+                    String message = "Your scheduled appointment was modified successfully.";
+                    DbNotification dbNotification = new DbNotification(
+                            "Appointment Modified.",
+                            message,
+                            userDetails.getId(),
+                            NotificationDetails.SYSTEM.name(),
+                            NotificationDetails.PATIENT_APPOINTMENT.name());
+
+                    notificationService.createNotification(dbNotification, notificationUrl);
+                }
+
+            }else {
+                results = new Results(400, "Make sure the user is a patient");
+            }
+
+        }else {
+            results = new Results(403, "Please use a valid token");
+        }
+
+        return formatterClass.getResponse(results);
+    }
+
+    //Modify a request appointment
+    @PutMapping("/modify-request-appointment/{appointmentId}")
+    public ResponseEntity<?> modifyRequestAppointment(
+            @PathVariable("appointmentId") String appointmentId,
+            @RequestBody DbModifyAppointment dbModifyAppointment
+    ){
+
+        Results results;
+        Optional<String> currentUserLogin = formatterClass.getCurrentUserLogin();
+        if (currentUserLogin.isPresent()){
+
+            UserDetails userDetails = getUserDetails(currentUserLogin.get());
+
+            if (userDetails != null){
+
+                results = timeSlotService.modifyRequestAppointment(appointmentId, dbModifyAppointment);
+                int statusCode = results.getCode();
+                if (statusCode == 200) {
+
+                    String message = "Your appointment request was modified successfully.";
+                    DbNotification dbNotification = new DbNotification(
+                            "Appointment Modified.",
+                            message,
+                            userDetails.getId(),
+                            NotificationDetails.SYSTEM.name(),
+                            NotificationDetails.PATIENT_APPOINTMENT.name());
+
+                    notificationService.createNotification(dbNotification, notificationUrl);
+                }
+
+            }else {
+                results = new Results(400, "Make sure the user is a patient");
+            }
+
+        }else {
+            results = new Results(403, "Please use a valid token");
+        }
+
+        return formatterClass.getResponse(results);
     }
 
     /**

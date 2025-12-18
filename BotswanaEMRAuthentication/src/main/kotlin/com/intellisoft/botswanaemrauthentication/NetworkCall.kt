@@ -141,6 +141,86 @@ class NetworkCall() {
 
     }
 
+    fun searchPatientByNationalPassport(nationalPassportNo: String) = runBlocking {
+        searchPatientByNationalPassportData(nationalPassportNo)
+    }
+
+    private suspend fun searchPatientByNationalPassportData(nationalPassportNo: String): Results {
+        var details: Any = ""
+        var code: Int
+
+        try {
+            val retrofitCall = networkRequestInterface?.getPatientDetailsFull(nationalPassportNo, "full")
+            if (retrofitCall != null) {
+                if (retrofitCall.isSuccessful) {
+                    code = 200
+                    val resultBody = retrofitCall.body()
+
+                    if (resultBody != null) {
+                        val resultsList = resultBody.results
+                        if (resultsList.isNotEmpty()) {
+                            // Get the first patient from results
+                            val patient = resultsList[0]
+                            val patientUuid = patient.uuid
+
+                            // Extract OpenMRS ID (PIN) from identifiers
+                            var openMrsId: String? = null
+                            patient.identifiers.forEach { identifier ->
+                                if (identifier.identifierType.display == "OpenMRS ID") {
+                                    openMrsId = identifier.identifier
+                                }
+                            }
+
+                            // Extract phone number from person attributes
+                            var phoneNumber: String? = null
+                            patient.person.attributes?.forEach { attribute ->
+                                if (attribute.attributeType.display == "Telephone Number") {
+                                    phoneNumber = attribute.value
+                                }
+                            }
+
+                            val finalOpenMrsId = openMrsId
+                            if (finalOpenMrsId != null) {
+                                details = DbOpenMrsPatientSearchResult(
+                                    openMrsUuid = patientUuid,
+                                    openMrsId = finalOpenMrsId,
+                                    phoneNumber = phoneNumber
+                                )
+                            } else {
+                                code = 404
+                                details = "Patient found but OpenMRS ID could not be extracted."
+                            }
+                        } else {
+                            code = 404
+                            details = "No patient found with the provided national passport number."
+                        }
+                    } else {
+                        code = 404
+                        details = "No patient found with the provided national passport number."
+                    }
+                } else {
+                    val errorCode = retrofitCall.code()
+                    if (errorCode == 500) {
+                        code = 404
+                        details = "There was an issue connecting. Please try again after sometime."
+                    } else {
+                        code = 400
+                        details = "There is an issue processing the request."
+                    }
+                }
+            } else {
+                code = 400
+                details = "The requested resource could not be found."
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            code = 400
+            details = "We could not process your request at the moment. Please try again after sometime."
+        }
+
+        return Results(code, details)
+    }
+
     fun getPatientConditionDetails(openMrsId: String) = runBlocking { getPatientConditions(openMrsId) }
     private suspend fun getPatientConditions(openMrsId: String): Results{
 
@@ -434,7 +514,248 @@ class NetworkCall() {
 
     }
 
+    //Get vitals
+    fun getPatientVitalsDetails(openMrsId: String) = runBlocking { getPatientVitals(openMrsId) }
+    private suspend fun getPatientVitals(openMrsId: String): Results{
+
+        var details: Any
+        var code: Int
+
+        // Vital signs keywords for filtering
+        val vitalSignsKeywords = listOf(
+            "weight", "height", "blood pressure", "temperature", "temp", 
+            "pulse", "heart rate", "respiratory", "oxygen", "systolic", 
+            "diastolic", "bmi", "bp", "hr", "rr", "spo2", "o2"
+        )
+
+        try {
+            val retrofitCall = networkRequestInterface?.getVitals(openMrsId, "full")
+            if (retrofitCall != null){
+
+                if (retrofitCall.isSuccessful){
+
+                    code = 200
+                    val resultBody = retrofitCall.body()
+                    if (resultBody != null){
+
+                        val dbVitalDataResultsList = ArrayList<DbVitalDataResults>()
+                        val bodyResult = resultBody.results
+
+                        if (bodyResult.isNotEmpty()){
+
+                            for (observation in bodyResult) {
+                                val conceptDisplay = observation.concept?.display?.lowercase() ?: ""
+                                
+                                // Check if this observation is a vital sign
+                                val isVitalSign = vitalSignsKeywords.any { keyword ->
+                                    conceptDisplay.contains(keyword, ignoreCase = true)
+                                }
+
+                                if (isVitalSign) {
+                                    val conceptName = observation.concept?.display ?: ""
+                                    val value = observation.value?.toString() ?: ""
+                                    
+                                    // Extract unit from concept display if available (e.g., "Weight (kg)" -> "kg")
+                                    var unit = ""
+                                    val unitMatch = Regex("\\(([^)]+)\\)").find(conceptName)
+                                    if (unitMatch != null) {
+                                        unit = unitMatch.groupValues[1]
+                                    }
+                                    
+                                    // Format date
+                                    var convertedDate = ""
+                                    if (observation.obsDatetime != null) {
+                                        try {
+                                            // Try parsing as ISO instant first (handles Z suffix)
+                                            val instant = Instant.parse(observation.obsDatetime)
+                                            val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
+                                            convertedDate = instant.atZone(ZoneId.systemDefault()).format(dateFormatter)
+                                        } catch (e: Exception) {
+                                            // Try with offset format (handles +0000)
+                                            try {
+                                                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+                                                val instant = Instant.from(formatter.parse(observation.obsDatetime))
+                                                val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
+                                                convertedDate = instant.atZone(ZoneId.systemDefault()).format(dateFormatter)
+                                            } catch (e2: Exception) {
+                                                // Try without milliseconds
+                                                try {
+                                                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+                                                    val instant = Instant.from(formatter.parse(observation.obsDatetime))
+                                                    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
+                                                    convertedDate = instant.atZone(ZoneId.systemDefault()).format(dateFormatter)
+                                                } catch (e3: Exception) {
+                                                    convertedDate = observation.obsDatetime
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    val encounterDisplay = observation.encounter?.display ?: ""
+                                    
+                                    val dbVitalDataResults = DbVitalDataResults(
+                                        conceptName = conceptName,
+                                        value = value,
+                                        unit = unit,
+                                        dateRecorded = convertedDate,
+                                        encounter = encounterDisplay
+                                    )
+                                    dbVitalDataResultsList.add(dbVitalDataResults)
+                                }
+                            }
+
+                        }
+
+                        val dbResultsData = DbResultsData(dbVitalDataResultsList.size, dbVitalDataResultsList)
+
+                        code = 200
+                        details = dbResultsData
+
+                    }else{
+                        code = 400
+                        details = "No vitals data found"
+                    }
 
 
+                }else{
+
+                    val errorCode = retrofitCall.code()
+                    println("------1 $errorCode")
+
+                    if (errorCode == 500){
+                        code = 400
+                        details = "We could not find any vitals."
+                    }else{
+                        code = 400
+                        details = "There is an issue processing the request."
+                    }
+
+                }
+
+
+            }else{
+                code = 400
+                details = "The requested resource could not be found."
+            }
+        }catch (e: Exception){
+
+            e.printStackTrace()
+
+            code = 400
+            details = "We could not process your request at the moment. Please try again after sometime."
+
+        }
+
+        return Results(code, details)
+
+    }
+
+
+
+
+    fun getPatientVisits(openMrsId: String) = runBlocking { fetchPatientVisits(openMrsId) }
+    private suspend fun fetchPatientVisits(openMrsId: String): Results {
+        var details: Any
+        var code: Int
+
+        try {
+            val retrofitCall = networkRequestInterface?.getVisits(openMrsId, "full")
+            if (retrofitCall != null) {
+
+                if (retrofitCall.isSuccessful) {
+                    val resultBody = retrofitCall.body()
+                    if (resultBody != null) {
+                        val visitsRaw = resultBody.results ?: emptyList()
+                        val visitSummaries = visitsRaw.map { mapVisitSummary(it) }
+                        val dbResultsData = DbResultsData(visitSummaries.size, visitSummaries)
+                        code = 200
+                        details = dbResultsData
+                    } else {
+                        code = 400
+                        details = "No visits found"
+                    }
+                } else {
+                    val errorCode = retrofitCall.code()
+                    code = if (errorCode == 500) {
+                        404
+                    } else {
+                        400
+                    }
+                    details = "There is an issue processing the request."
+                }
+            } else {
+                code = 400
+                details = "The requested resource could not be found."
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            code = 400
+            details = "We could not process your request at the moment. Please try again after sometime."
+        }
+
+        return Results(code, details)
+    }
+
+    fun getVisitById(visitId: String) = runBlocking { fetchVisitById(visitId) }
+    private suspend fun fetchVisitById(visitId: String): Results {
+        var details: Any
+        var code: Int
+
+        try {
+            val retrofitCall = networkRequestInterface?.getVisitById(visitId, "full")
+            if (retrofitCall != null) {
+
+                if (retrofitCall.isSuccessful) {
+                    val resultBody = retrofitCall.body()
+                    if (resultBody != null) {
+                        val visitSummary = mapVisitSummary(resultBody)
+                        code = 200
+                        details = visitSummary
+                    } else {
+                        code = 400
+                        details = "No visit found"
+                    }
+                } else {
+                    val errorCode = retrofitCall.code()
+                    code = if (errorCode == 404) {
+                        404
+                    } else {
+                        400
+                    }
+                    details = "There is an issue processing the request."
+                }
+            } else {
+                code = 400
+                details = "The requested resource could not be found."
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            code = 400
+            details = "We could not process your request at the moment. Please try again after sometime."
+        }
+
+        return Results(code, details)
+    }
+
+    private fun mapVisitSummary(visit: DbVisitRaw): VisitSummary {
+        val encounterSummaries = visit.encounters?.map { encounter ->
+            VisitEncounterSummary(
+                uuid = encounter.uuid,
+                display = encounter.display,
+                encounterType = encounter.encounterType?.display,
+                encounterDatetime = encounter.encounterDatetime,
+                location = encounter.location?.display
+            )
+        } ?: emptyList()
+
+        return VisitSummary(
+            uuid = visit.uuid,
+            visitType = visit.visitType?.display,
+            startDatetime = visit.startDatetime,
+            stopDatetime = visit.stopDatetime,
+            location = visit.location?.display,
+            encounters = encounterSummaries
+        )
+    }
 
 }
