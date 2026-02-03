@@ -49,6 +49,7 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
                 .antMatchers("/auths/api/v1/request-password-reset").permitAll()
                 .antMatchers("/auths/api/v1/reset-password").permitAll()
                 .antMatchers("/auths/api/v1/link-patient").permitAll()
+                .antMatchers("/auths/api/v1/unlink-patient").permitAll()
                 .antMatchers("/auths/api/v1/verify-link/**").permitAll()
                 .antMatchers("/auths/service/authentication/**").permitAll()
 

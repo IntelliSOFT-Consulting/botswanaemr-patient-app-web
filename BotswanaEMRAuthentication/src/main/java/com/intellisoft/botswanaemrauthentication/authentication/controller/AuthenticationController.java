@@ -120,6 +120,17 @@ public class AuthenticationController {
         }
     }
 
-
+    //Unlink patient
+    @PostMapping(path = "/unlink-patient")
+    public ResponseEntity<?> unlinkPatient(@RequestBody LinkPatientRequest linkPatientRequest) {
+        try {
+            Results results = patientDetailsService.unlinkPatient(linkPatientRequest);
+            return formatterClass.getResponse(results);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Results results = new Results(400, "There was something wrong with the request. Try after some time");
+            return ResponseEntity.badRequest().body(results);
+        }
+    }
 
 }

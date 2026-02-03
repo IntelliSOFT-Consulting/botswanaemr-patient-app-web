@@ -175,7 +175,17 @@ class NetworkCall() {
                             var phoneNumber: String? = null
                             patient.person.attributes?.forEach { attribute ->
                                 if (attribute.attributeType.display == "Telephone Number") {
-                                    phoneNumber = attribute.value
+                                    // Handle both string and object values
+                                    phoneNumber = when (attribute.value) {
+                                        is String -> attribute.value as String
+                                        is Map<*, *> -> {
+                                            // If it's an object, try to get the display or value field
+                                            (attribute.value as Map<*, *>)["display"] as? String
+                                                ?: (attribute.value as Map<*, *>)["value"] as? String
+                                                ?: attribute.value.toString()
+                                        }
+                                        else -> attribute.value.toString()
+                                    }
                                 }
                             }
 
@@ -200,12 +210,19 @@ class NetworkCall() {
                     }
                 } else {
                     val errorCode = retrofitCall.code()
+                    var errorBody: String? = null
+                    try {
+                        errorBody = retrofitCall.errorBody()?.string()
+                    } catch (e: Exception) {
+                        // Error body already consumed or not available
+                    }
+                    println("OpenMRS API call failed. Status code: $errorCode, Error body: $errorBody, National ID: $nationalPassportNo")
                     if (errorCode == 500) {
                         code = 404
-                        details = "There was an issue connecting. Please try again after sometime."
+                        details = "There was an issue connecting to OpenMRS (HTTP $errorCode). ${if (errorBody != null) "Error: $errorBody" else "Please try again after sometime."}"
                     } else {
                         code = 400
-                        details = "There is an issue processing the request."
+                        details = "OpenMRS API returned error code $errorCode. ${if (errorBody != null) "Error: $errorBody" else "No patient found with National ID: $nationalPassportNo"}"
                     }
                 }
             } else {
@@ -214,8 +231,9 @@ class NetworkCall() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            println("Exception in searchPatientByNationalPassport for National ID: $nationalPassportNo. Error: ${e.message}")
             code = 400
-            details = "We could not process your request at the moment. Please try again after sometime."
+            details = "We could not process your request at the moment. Error: ${e.message ?: e.javaClass.simpleName}. Please try again after sometime."
         }
 
         return Results(code, details)

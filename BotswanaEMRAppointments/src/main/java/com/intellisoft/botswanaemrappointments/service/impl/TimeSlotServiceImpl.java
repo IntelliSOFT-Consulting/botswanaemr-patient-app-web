@@ -497,9 +497,16 @@ public class TimeSlotServiceImpl implements TimeSlotService {
         String cancelUrl = appointmentsUrl + "/"+ uuid;
         
         try{
+            // Update appointment status using PUT to avoid voiding the appointment
+            // Using PUT follows the same pattern as modifyRequestAppointment which successfully updates appointments
+            Map<String, String> requestPayload = new HashMap<>();
+            String statusCode = dbCancelAppointment.getStatus() != null ? dbCancelAppointment.getStatus().getCode() : "CANCELLED";
+            requestPayload.put("status", statusCode);
 
-            DbCancelRequestAppointmentResponse cancelAppointmentResponse = GenericWebClient.postRequest(webClient, cancelUrl,
-                    getBasicAuthenticationHeader(username, password), dbCancelAppointment, DbCancelRequestAppointmentResponse.class);
+            log.info("Cancelling request appointment {} with payload: {}", uuid, requestPayload);
+
+            DbCancelRequestAppointmentResponse cancelAppointmentResponse = GenericWebClient.putRequest(webClient, cancelUrl,
+                    getBasicAuthenticationHeader(username, password), requestPayload, DbCancelRequestAppointmentResponse.class);
 
             if (cancelAppointmentResponse != null){
 
@@ -532,7 +539,6 @@ public class TimeSlotServiceImpl implements TimeSlotService {
 
         String uuid = dbCancelAppointment.getUuid();
         String cancelUrl = scheduleUrl + "/"+ uuid;
-        String voidUrl = cancelUrl + "?reason=Cancelled%20via%20API";
 
         try{
             // Check current appointment status first to avoid unnecessary API calls for already-cancelled appointments
@@ -561,16 +567,15 @@ public class TimeSlotServiceImpl implements TimeSlotService {
                 log.debug("Could not check current appointment status for {}, proceeding with cancellation: {}", uuid, e.getMessage());
             }
             
-            // According to OpenMRS documentation, status should be sent as a string "CANCELLED"
-            // However, OpenMRS has a bug (NullPointerException) when trying to update appointment status
-            // This affects appointments with associated visits
+            // Update appointment status using PUT to avoid voiding the appointment
+            // Using PUT follows the same pattern as modifyScheduledAppointment which successfully updates appointments
             Map<String, String> requestPayload = new HashMap<>();
             String statusCode = dbCancelAppointment.getStatus() != null ? dbCancelAppointment.getStatus().getCode() : "CANCELLED";
             requestPayload.put("status", statusCode);
 
             log.info("Cancelling scheduled appointment {} with payload: {}", uuid, requestPayload);
 
-            DbCancelScheduledAppointmentResponse cancelAppointmentResponse = GenericWebClient.postRequest(webClient, cancelUrl,
+            DbCancelScheduledAppointmentResponse cancelAppointmentResponse = GenericWebClient.putRequest(webClient, cancelUrl,
                     getBasicAuthenticationHeader(username, password), requestPayload, DbCancelScheduledAppointmentResponse.class);
 
             if (cancelAppointmentResponse != null){

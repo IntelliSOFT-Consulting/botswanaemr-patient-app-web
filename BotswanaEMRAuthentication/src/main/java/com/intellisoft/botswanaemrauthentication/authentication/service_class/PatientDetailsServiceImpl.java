@@ -1037,21 +1037,29 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     public Results linkPatient(LinkPatientRequest linkPatientRequest) {
         String nationalPassportNo = linkPatientRequest.getNationalPassportNo();
         String phoneNumber = linkPatientRequest.getPhoneNumber();
-        String patientIdentificationNo = linkPatientRequest.getPatientIdentificationNo();
 
         // Search OpenMRS by national passport number
         Results searchResults = networkCall.searchPatientByNationalPassport(nationalPassportNo);
         
         if (searchResults.getCode() != 200) {
-            return new Results(400, "Patient not found in OpenMRS with the provided national passport number");
+            String errorMessage = "Patient not found in OpenMRS with the provided national passport number";
+            if (searchResults.getMessage() != null) {
+                errorMessage = searchResults.getMessage().toString();
+            }
+            System.out.println("Link patient failed for National ID: " + nationalPassportNo + ". Error: " + errorMessage);
+            return new Results(400, errorMessage);
         }
 
         // Extract patient information from OpenMRS
         DbOpenMrsPatientSearchResult openMrsPatient = (DbOpenMrsPatientSearchResult) searchResults.getMessage();
         String openMrsPhoneNumber = openMrsPatient.getPhoneNumber();
         
+        // Normalize phone numbers (remove spaces) before comparison
+        String normalizedOpenMrsPhone = normalizePhoneNumber(openMrsPhoneNumber);
+        String normalizedProvidedPhone = normalizePhoneNumber(phoneNumber);
+        
         // Verify phone number matches
-        if (openMrsPhoneNumber == null || !openMrsPhoneNumber.equals(phoneNumber)) {
+        if (normalizedOpenMrsPhone == null || !normalizedOpenMrsPhone.equals(normalizedProvidedPhone)) {
             return new Results(400, "Phone number does not match the one in OpenMRS");
         }
 
@@ -1060,6 +1068,27 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
         
         if (patientDetails == null) {
             return new Results(400, "Patient not found in local database with the provided national passport number");
+        }
+
+        // Check if patient is already linked
+        boolean isAlreadyLinked = patientDetails.isPatient() && 
+                                   patientDetails.getOpenMrsId() != null && 
+                                   !patientDetails.getOpenMrsId().isEmpty();
+        
+        if (isAlreadyLinked) {
+            // Patient is already linked, return patient info with already linked message
+            Results patientResults = getPatientResultsData(patientDetails);
+            if (patientResults.getCode() == 200) {
+                DbPatientDetails dbPatientDetails = (DbPatientDetails) patientResults.getMessage();
+                LinkPatientResponse linkResponse = new LinkPatientResponse(
+                    "Patient is already linked",
+                    dbPatientDetails,
+                    true
+                );
+                return new Results(200, linkResponse);
+            } else {
+                return new Results(400, "Failed to retrieve patient details");
+            }
         }
 
         // Update patient identification number with OpenMRS ID
@@ -1071,10 +1100,81 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
         // Save the updated patient details
         PatientDetails updatedPatientDetails = updateUserDetails(patientDetails);
         if (updatedPatientDetails != null) {
-            return new Results(200, new DbResults("Patient linked successfully"));
+            // Return patient info with success message
+            Results patientResults = getPatientResultsData(updatedPatientDetails);
+            if (patientResults.getCode() == 200) {
+                DbPatientDetails dbPatientDetails = (DbPatientDetails) patientResults.getMessage();
+                LinkPatientResponse linkResponse = new LinkPatientResponse(
+                    "Patient linked successfully",
+                    dbPatientDetails,
+                    false
+                );
+                return new Results(200, linkResponse);
+            } else {
+                return new Results(400, "Failed to retrieve patient details");
+            }
         } else {
             return new Results(400, "Failed to update patient details");
         }
+    }
+
+    @Override
+    public Results unlinkPatient(LinkPatientRequest linkPatientRequest) {
+        String nationalPassportNo = linkPatientRequest.getNationalPassportNo();
+        String phoneNumber = linkPatientRequest.getPhoneNumber();
+
+        // Search OpenMRS by national passport number (for verification)
+        Results searchResults = networkCall.searchPatientByNationalPassport(nationalPassportNo);
+        
+        if (searchResults.getCode() != 200) {
+            String errorMessage = searchResults.getMessage() != null ? 
+                searchResults.getMessage().toString() : 
+                "Patient not found in OpenMRS with the provided national passport number";
+            return new Results(400, errorMessage);
+        }
+
+        // Extract patient information from OpenMRS
+        DbOpenMrsPatientSearchResult openMrsPatient = (DbOpenMrsPatientSearchResult) searchResults.getMessage();
+        String openMrsPhoneNumber = openMrsPatient.getPhoneNumber();
+        
+        // Normalize phone numbers (remove spaces) before comparison
+        String normalizedOpenMrsPhone = normalizePhoneNumber(openMrsPhoneNumber);
+        String normalizedProvidedPhone = normalizePhoneNumber(phoneNumber);
+        
+        // Verify phone number matches
+        if (normalizedOpenMrsPhone == null || !normalizedOpenMrsPhone.equals(normalizedProvidedPhone)) {
+            return new Results(400, "Phone number does not match the one in OpenMRS");
+        }
+
+        // Find patient in local database by national passport number
+        PatientDetails patientDetails = patientDetailsRepository.findByNationalPassportNo(nationalPassportNo);
+        
+        if (patientDetails == null) {
+            return new Results(400, "Patient not found in local database with the provided national passport number");
+        }
+
+        // Clear linking: set isPatient = false, openMrsId = null, patientIdentificationNo = null
+        patientDetails.setPatient(false);
+        patientDetails.setOpenMrsId(null);
+        patientDetails.setPatientIdentificationNo(null);
+
+        // Save the updated patient details
+        PatientDetails updatedPatientDetails = updateUserDetails(patientDetails);
+        if (updatedPatientDetails != null) {
+            return new Results(200, new DbResults("Patient unlinked successfully"));
+        } else {
+            return new Results(400, "Failed to update patient details");
+        }
+    }
+
+    /**
+     * Normalize phone number by removing all spaces
+     * @param phoneNumber The phone number to normalize
+     * @return Normalized phone number without spaces, or null if input is null
+     */
+    private String normalizePhoneNumber(String phoneNumber) {
+        if (phoneNumber == null) return null;
+        return phoneNumber.replaceAll("\\s+", "");
     }
 
     public void addRealmRoleToUser(String keyCloakId, String role_name)

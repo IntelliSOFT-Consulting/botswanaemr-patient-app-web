@@ -83,8 +83,7 @@ data class UpdateUserDetails(
 )
 data class LinkPatientRequest(
     val phoneNumber: String,
-    val nationalPassportNo: String,
-    val patientIdentificationNo: String
+    val nationalPassportNo: String
 )
 
 data class DbPerson(
@@ -163,6 +162,11 @@ enum class NotificationDetails(){
 }
 data class DbResults(
     val message: String
+)
+data class LinkPatientResponse(
+    val message: String,
+    val patient: DbPatientDetails,
+    val alreadyLinked: Boolean = false
 )
 data class DbPatientDetails(
 
@@ -290,7 +294,7 @@ data class DbOpenMrsPersonData(
     val attributes: List<DbOpenMrsAttribute>?
 )
 data class DbOpenMrsAttribute(
-    val value: String,
+    val value: Any, // Can be String or Object (for complex attributes like Education, Employment Sector)
     val attributeType: DbOpenMrsAttributeType
 )
 data class DbOpenMrsAttributeType(

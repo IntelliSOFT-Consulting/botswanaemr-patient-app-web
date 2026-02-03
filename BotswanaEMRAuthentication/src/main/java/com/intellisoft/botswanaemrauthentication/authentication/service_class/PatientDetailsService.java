@@ -48,4 +48,7 @@ public interface PatientDetailsService {
     //Link patient
     Results linkPatient(LinkPatientRequest linkPatientRequest);
 
+    //Unlink patient
+    Results unlinkPatient(LinkPatientRequest linkPatientRequest);
+
 }
