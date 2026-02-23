@@ -219,7 +219,11 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                     createNotification(dbNotification);
 
                     return new Results(201,
-                            "Patient has been saved successfully. Check email for verification link.");
+                            "Patient registration completed successfully.\n" +
+                                    "\n" +
+                                    "A verification link has been dispatched to the registered email address. Kindly review your inbox (and spam folder) within the next 5 minutes to activate the account and proceed.\n" +
+                                    "\n" +
+                                    "If the email is not received shortly, please confirm the address provided or request a new verification link.");
 
                 }else {
 
