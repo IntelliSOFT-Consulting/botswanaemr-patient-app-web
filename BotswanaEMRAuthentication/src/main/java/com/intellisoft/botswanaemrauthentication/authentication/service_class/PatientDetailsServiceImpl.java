@@ -547,19 +547,16 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
 
                     if(dbOtpCode.equals(requestOtpCode)){
 
-                        Keycloak keycloak = KeycloakBuilder
-                                .builder()
+                        Keycloak keycloak = KeycloakBuilder.builder()
                                 .serverUrl(authServerUrl)
-                                .grantType(PASSWORD)
                                 .realm(realm)
+                                .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
                                 .clientId(clientId)
-                                .username(username).password(password)
+                                .clientSecret(clientSecret)
                                 .resteasyClient(
                                         new ResteasyClientBuilder()
-                                                .sslContext(new SSLContextBuilder().loadTrustMaterial(null,
-                                                        TrustAllStrategy.INSTANCE).build())
-                                                .hostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                                                .connectionPoolSize(10).build())
+                                                .connectionPoolSize(10)
+                                                .build())
                                 .build();
 
                         keycloak.tokenManager().getAccessToken();
