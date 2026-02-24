@@ -518,7 +518,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
             createNotification(dbNotification);
 
             return new Results(200,
-                    new DbResults("A reset password code has been sent to your email address."));
+                    new DbResults("A reset password code has been sent to your email address within 5 minutes."));
 
         }else {
             //Email does not exist
@@ -590,7 +590,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                                 NotificationDetails.AUTHENTICATION.name());
                         createNotification(dbNotification);
 
-                        return new Results(200, "Password has been changed successfully.");
+                        return new Results(200, new DbResults("Your password has been changed successfully."));
 
 
                     }else {
