@@ -17,13 +17,13 @@ import retrofit2.converter.jackson.JacksonConverterFactory;
 @SpringBootApplication
 public class BotswanaEmrAuthenticationApplication {
 
-    private FormatterClass formatterClass = new FormatterClass();
-
-    OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
-
-    private String credentials = Credentials.basic(
-            formatterClass.getValue().getUsername(),
-            formatterClass.getValue().getPassword());
+//    private FormatterClass formatterClass = new FormatterClass();
+//
+//    OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+//
+//    private String credentials = Credentials.basic(
+//            "admin",
+//            "Admin123");
 
 
     public static void main(String[] args) {
@@ -41,25 +41,25 @@ public class BotswanaEmrAuthenticationApplication {
         return new KeycloakSpringBootConfigResolver();
     }
 
-    Interceptor interceptor = chain -> {
-        Request request = chain.request().newBuilder()
-                .header("Authorization", credentials).build();
+//    Interceptor interceptor = chain -> {
+//        Request request = chain.request().newBuilder()
+//                .header("Authorization", credentials).build();
+//
+//        return chain.proceed(request);
+//    };
 
-        return chain.proceed(request);
-    };
 
 
-
-    @Bean
-    public Retrofit retrofit() {
-        clientBuilder.interceptors().add(interceptor);
-        return new Retrofit.Builder()
-                .baseUrl(formatterClass.getValue().getOpenMrsUrl())
-                .client(clientBuilder.build())
-                .addConverterFactory(GsonConverterFactory.create())
-                .addConverterFactory(JacksonConverterFactory.create())
-                .build();
-    }
+//    @Bean
+//    public Retrofit retrofit() {
+//        clientBuilder.interceptors().add(interceptor);
+//        return new Retrofit.Builder()
+//                .baseUrl(formatterClass.getValue().getOpenMrsUrl())
+//                .client(clientBuilder.build())
+//                .addConverterFactory(GsonConverterFactory.create())
+//                .addConverterFactory(JacksonConverterFactory.create())
+//                .build();
+//    }
 
 
 

@@ -1,15 +1,13 @@
 package com.intellisoft.botswanaemrauthentication.user_details;
 
-import com.intellisoft.botswanaemrauthentication.DbConsent;
-import com.intellisoft.botswanaemrauthentication.FormatterClass;
-import com.intellisoft.botswanaemrauthentication.Results;
-import com.intellisoft.botswanaemrauthentication.UpdateUserDetails;
+import com.intellisoft.botswanaemrauthentication.*;
 import com.intellisoft.botswanaemrauthentication.authentication.service_class.PatientDetailsService;
 import com.intellisoft.botswanaemrauthentication.consent.service.ConsentServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RequestMapping(value = "/auths/api/v1/user/")
@@ -19,6 +17,12 @@ public class UserController {
     @Autowired
     private PatientDetailsService patientDetailsService;
     FormatterClass formatterClass = new FormatterClass();
+
+    private final NetworkCall networkCall;
+
+    public UserController(NetworkCall networkCall) {
+        this.networkCall = networkCall;
+    }
 
     @GetMapping(value = "details")
     public ResponseEntity<?> getUserDetails(){
@@ -65,6 +69,7 @@ public class UserController {
         }
 
     }
+
 
     /**
      * Get Conditions

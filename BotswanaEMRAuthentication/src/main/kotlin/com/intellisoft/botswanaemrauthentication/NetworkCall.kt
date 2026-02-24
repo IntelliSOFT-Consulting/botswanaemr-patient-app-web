@@ -2,34 +2,30 @@ package com.intellisoft.botswanaemrauthentication
 
 import kotlinx.coroutines.*
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import retrofit2.Retrofit
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.annotation.PostConstruct
 
 
 @Component
-class NetworkCall() {
+class NetworkCall(
+    @Autowired private val retrofit: Retrofit
+) {
 
     @Autowired
     lateinit var appProperties: AppProperties
 
     var restTemplate = RestTemplateConfig().restTemplate()
 
-    @Autowired
-    private val retrofit: Retrofit? = null
-
-    private var networkRequestInterface: NetworkRequestInterface? = null
-
-    @PostConstruct
-    fun setup() {
-        networkRequestInterface = retrofit?.create(NetworkRequestInterface::class.java)
-    }
-
+    private val networkRequestInterface: NetworkRequestInterface =
+        retrofit.create(NetworkRequestInterface::class.java)
 
     fun createNotification(type: String, dbNotification: DbNotification) {
 
@@ -158,23 +154,23 @@ class NetworkCall() {
 
                     if (resultBody != null) {
                         val resultsList = resultBody.results
-                        if (resultsList.isNotEmpty()) {
+                        if (!resultsList.isNullOrEmpty()) {
                             // Get the first patient from results
                             val patient = resultsList[0]
                             val patientUuid = patient.uuid
 
                             // Extract OpenMRS ID (PIN) from identifiers
                             var openMrsId: String? = null
-                            patient.identifiers.forEach { identifier ->
-                                if (identifier.identifierType.display == "OpenMRS ID") {
+                            patient.identifiers?.forEach { identifier ->
+                                if (identifier.identifierType?.display == "OpenMRS ID") {
                                     openMrsId = identifier.identifier
                                 }
                             }
 
                             // Extract phone number from person attributes
                             var phoneNumber: String? = null
-                            patient.person.attributes?.forEach { attribute ->
-                                if (attribute.attributeType.display == "Telephone Number") {
+                            patient.person?.attributes?.forEach { attribute ->
+                                if (attribute.attributeType?.display == "Telephone Number") {
                                     // Handle both string and object values
                                     phoneNumber = when (attribute.value) {
                                         is String -> attribute.value as String
@@ -192,7 +188,7 @@ class NetworkCall() {
                             val finalOpenMrsId = openMrsId
                             if (finalOpenMrsId != null) {
                                 details = DbOpenMrsPatientSearchResult(
-                                    openMrsUuid = patientUuid,
+                                    openMrsUuid = patientUuid ?: "",
                                     openMrsId = finalOpenMrsId,
                                     phoneNumber = phoneNumber
                                 )
@@ -327,6 +323,51 @@ class NetworkCall() {
 
         return Results(code, details)
 
+    }
+
+    fun getConditionsValuesDetails(openMrsId: String) = runBlocking { getConditionsValues(openMrsId) }
+
+    suspend fun getConditionsValues(patientUuid: String): List<PatientCondition> {
+
+        val response = networkRequestInterface.getConditionsValues(patientUuid)
+
+        if (!response.isSuccessful) {
+            throw RuntimeException("Failed to fetch conditions: ${response.code()}")
+        }
+
+        val bundle = response.body() ?: return emptyList()
+
+        return bundle.entry
+            ?.mapNotNull { it.resource }
+            ?.map { resource ->
+
+                val conditionValue = resource.extension
+                    ?.firstOrNull {
+                        it.url?.contains("non-coded-condition") == true
+                    }
+                    ?.valueString
+                    ?: "Unspecified"
+
+                val statusCode = resource.clinicalStatus
+                    ?.coding
+                    ?.firstOrNull()
+                    ?.code
+                    ?: "unknown"
+
+                val recorder = resource.recorder?.display ?: "system"
+
+                val recordedDate = resource.recordedDate
+                    ?.let { OffsetDateTime.parse(it) }
+                    ?: OffsetDateTime.now()
+
+                PatientCondition(
+                    condition = conditionValue,
+                    clinicalStatus = statusCode,
+                    recordedBy = recorder,
+                    recordedDate = recordedDate
+                )
+            }
+            ?: emptyList()
     }
 
     //Get allergy

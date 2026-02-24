@@ -1,6 +1,5 @@
 package com.intellisoft.botswanaemrauthentication.authentication.service_class;
 
-
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -85,8 +84,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     @Value("${app.keycloak.realm.password}")
     private String password;
 
-    @Autowired
-    private NetworkCall networkCall = new NetworkCall();
+    private final NetworkCall networkCall;
 
     @Autowired
     private PatientDetailsRepository patientDetailsRepository;
@@ -100,6 +98,10 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     private FormatterClass formatterClass = new FormatterClass();
 
     private final RestTemplateConfig restTemplateConfig = new RestTemplateConfig();
+
+    public PatientDetailsServiceImpl(NetworkCall networkCall) {
+        this.networkCall = networkCall;
+    }
 
     @Transactional
     @Override
@@ -161,20 +163,20 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                         if (results.getCode() == 200){
                             //Patient found in OpenMRS
                             DbOpenMrsPatientSearchResult searchResult = (DbOpenMrsPatientSearchResult) results.getMessage();
-                            
+
                             // Verify phone number matches
                             String openMrsPhoneNumber = searchResult.getPhoneNumber();
                             String providedPhoneNumber = registerRequest.getPhoneNumber();
-                            
+
                             if (openMrsPhoneNumber != null && openMrsPhoneNumber.equals(providedPhoneNumber)){
                                 // Phone matches - link patient
                                 String openMrsId = searchResult.getOpenMrsId();
                                 String openMrsUUId = searchResult.getOpenMrsUuid();
-                                
+
                                 patientDetails.setPatientIdentificationNo(openMrsId);
                                 patientDetails.setOpenMrsId(openMrsUUId);
                                 patientDetails.setPatient(true);
-                                
+
                                 notification = notification + "\n" + "Patient linked successfully. You can now access your medical records.";
                             } else {
                                 // Phone doesn't match - proceed without linking
@@ -823,24 +825,38 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     @Override
     public Results getConditions(String userId) {
 
+        ArrayList<DbConditionDataResults> dbConditionDataResultsArrayList = new ArrayList<>();
+
         PatientDetails patientDetails = getPatientData(userId);
         if (patientDetails != null){
 
             String openMrsId = patientDetails.getOpenMrsId();
 
-            if (openMrsId == null || openMrsId.isEmpty()) {
-                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
-            }
+//            if (openMrsId == null || openMrsId.isEmpty()) {
+//                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
+//            }
 
-            System.out.println("======");
-            System.out.println(openMrsId);
+            List<PatientCondition> patientConditionList = networkCall
+                    .getConditionsValuesDetails("2f394969-ec6d-4692-8544-4ac212d0f22e");
 
-            return networkCall.getPatientConditionDetails(openMrsId);
+            patientConditionList.forEach(patientCondition -> {
+
+                DbConditionDataResults dbConditionDataResults = new DbConditionDataResults(
+                        patientCondition.getCondition(),
+                        patientCondition.getClinicalStatus(),
+                        patientCondition.getRecordedDate().toString(),
+                        patientCondition.getRecordedBy()
+                );
+                dbConditionDataResultsArrayList.add(dbConditionDataResults);
+
+            });
+
+            DbResultsData dbResultsData = new DbResultsData(dbConditionDataResultsArrayList.size(), dbConditionDataResultsArrayList);
+            return new Results(200, dbResultsData);
 
         }else {
             return new Results(400, new DbResults("We could not find the user."));
         }
-
 
     }
 
@@ -1365,9 +1381,6 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
 
         int statusCode = response.getStatus();
 
-        System.out.println("----------1");
-        System.out.println(statusCode);
-
         if (statusCode == 201){
             //User has been registered successfully, get saved details
             String userId = CreatedResponseUtil.getCreatedId(response);
@@ -1378,17 +1391,11 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
             passwordCred.setType(CredentialRepresentation.PASSWORD);
             passwordCred.setValue(registerRequest.getPassword());
 
-            System.out.println("--------2");
-
             UserResource userResource = usersRessource.get(userId);
 //            // Set password credential
             userResource.resetPassword(passwordCred);
 
-            System.out.println("--------3" + userId);
-
             addRealmRoleToUser(userId, role);
-
-            System.out.println("---------5");
 
             return new KeycloakUserId(userId);
 
@@ -1404,13 +1411,9 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
 
     private void assignRoleToUser(String userId, String role) {
 
-        System.out.println("4");
-
         Keycloak keycloak = getAdminKeycloak();
         UsersResource usersResource = keycloak.realm(realm).users();
         UserResource userResource = usersResource.get(userId);
-
-        System.out.println("5");
 
         //getting client
         ClientRepresentation clientRepresentation =
@@ -1418,13 +1421,10 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                         client -> client.getClientId().equals(clientId))
                         .collect(Collectors.toList()).get(0);
         ClientResource clientResource = keycloak.realm(realm).clients().get(clientRepresentation.getId());
-
-        System.out.println("6");
         //getting role
         RoleRepresentation roleRepresentation = clientResource.roles().list().stream().filter(element -> element.getName().equals(role)).collect(Collectors.toList()).get(0);
         //assigning to user
         userResource.roles().clientLevel(clientRepresentation.getId()).add(Collections.singletonList(roleRepresentation));
-        System.out.println("7");
     }
 
     private Keycloak getAdminKeycloak() {
