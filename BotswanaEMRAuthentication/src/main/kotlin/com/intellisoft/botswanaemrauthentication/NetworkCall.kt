@@ -397,11 +397,14 @@ class NetworkCall(
                             val reactionList = ArrayList<String>()
 
                             val reactionsList = dbAllergyData.reactions
+                            val comment = dbAllergyData.comment
+
                             reactionsList?.forEach{
 
                                 val reaction = it.reaction?.display ?: ""
                                 reactionList.add(reaction)
                             }
+                            reactionList.add(comment?: "")
                             val dbAllergyDataResults = DbAllergyDataResults(display ?: "", reactionList)
                             dbAllergyDataResultsList.add(dbAllergyDataResults)
                         }

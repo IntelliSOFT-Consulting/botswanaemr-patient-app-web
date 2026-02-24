@@ -224,6 +224,7 @@ data class DbAllergyResults(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class DbAllergyData(
     val display: String? = null,
+    val comment: String? = null,
     val uuid: String? = null,
     val reactions: List<DbAllergyReactions>? = null
 )
