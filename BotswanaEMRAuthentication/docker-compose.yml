@@ -1,16 +1,21 @@
 version: "3.5"
 services:
   botswana_emr_auth:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: dnjau/botswana_emr_auth_image:latest
     container_name: botswanaauth
-#    command: bash -c "java -jar -Dspring.profiles.active=server ./botswana_emr_auth_javabackend/BotswanaEMRAuthentication-0.0.1-SNAPSHOT.jar"
+    env_file:
+      - .env.${ENV_PROFILE:-server}   # Picks dev or server based on ENV_PROFILE
     command: bash -c "java -jar ./botswana_emr_auth_javabackend/BotswanaEMRAuthentication-0.0.1-SNAPSHOT.jar"
     ports:
-      - "8081:8081"
+      - "${SERVER_PORT:-8081}:8081"
     volumes:
       - .:/botswana_emr_auth_javabackend
+    networks:
+      - emr-network
+
 networks:
-  default:
-    external:
-      name: botswana-emr-network
+  emr-network:
+    driver: bridge
