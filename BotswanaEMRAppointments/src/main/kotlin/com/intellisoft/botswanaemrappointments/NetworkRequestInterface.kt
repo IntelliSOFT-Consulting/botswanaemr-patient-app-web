@@ -57,4 +57,12 @@ interface NetworkRequestInterface {
     suspend fun scheduleNewAppointment(@Body dbScheduleNewAppointment: DbScheduleNewAppointment):
             Response<DbSuccessAppointment>
 
+    //Patient Visits
+    @GET("visit")
+    suspend fun getPatientVisits(
+        @Query("patient") patient: String,
+        @Query("v") v: String,
+        @Query("includeInactive") includeInactive: Boolean = false
+    ): Response<DbVisitResponse>
+
 }

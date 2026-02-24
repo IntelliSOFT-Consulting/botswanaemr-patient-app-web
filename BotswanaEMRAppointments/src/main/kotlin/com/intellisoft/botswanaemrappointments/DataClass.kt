@@ -10,6 +10,20 @@ data class DbAppValues(
 data class Results(val code: Int, val details: Any?)
 data class Error(var timestamp: String, var status: String, var error: String)
 data class DbResultsData(val message: String)
+data class DbCancelAppointmentResponse(
+    val message: String,
+    val appointment: DbCancelAppointmentDetails?
+)
+data class DbCancelAppointmentDetails(
+    val uuid: String?,
+    val status: String?,
+    val display: String?,
+    val appointmentType: String?,
+    val date: String?,
+    val time: String?,
+    val provider: String?,
+    val location: String?
+)
 
 data class DbServiceTypes(
     val results:List<DbAppointmentTypesResults>
@@ -58,7 +72,8 @@ data class DbAppointmentBlock(
     val startDate: String?,
     val endDate: String?,
     val provider: DbProviderResults?,
-    val locations: DbResults?,
+    @JsonProperty("location")
+    val location: DbLocation?,
     val types :List<DbResults?>)
 
 data class DbAvailableTimeBlock(
@@ -335,6 +350,9 @@ data class DbRequestAppointmentDetails(
     @JsonProperty("provider")
     val provider: DbProviderResults?,
 
+    @JsonProperty("location")
+    val location: DbLocation?,
+
     @JsonProperty("requestedBy")
     val requestedBy: DbProviderResults?
 )
@@ -353,10 +371,13 @@ data class Detail(
     val uuid: String,
     val appointmentIdentifier: String?,
     val appointmentType: String?,
+    val serviceUuid: String?,
+    val serviceName: String?,
     val reasonNotes: String?,
     val status: String?,
     val requestedAppointmentDetails: RequestedAppointmentDetails? = null,
     val scheduledAppointmentDetails: ScheduledAppointmentDetails? = null
+    
 )
 
 data class RequestedAppointmentDetails(
@@ -366,7 +387,7 @@ data class RequestedAppointmentDetails(
 )
 
 data class ScheduledAppointmentDetails(
-    val location: String?,
+    val location: DbLocation?,
     val provider: String?,
     val startDate: String?,
     val endDate: String?
@@ -397,7 +418,7 @@ data class DbReturnDetails(
 )
 data class DbCancelAppointment(
     val uuid: String,
-    val status: String
+    val status: DbStatusData?
 )
 data class DbCancelRequestAppointmentResponse(
     @JsonProperty("uuid")
@@ -414,4 +435,146 @@ data class DbCancelScheduledAppointmentResponse(
 data class DbStatusData(
     @JsonProperty("code")
     val code: String?,
+)
+data class DbModifyAppointment(
+    val timeSlot: String?,
+    val appointmentType: String?,
+    val reason: String?
+)
+data class DbModifyScheduledAppointmentResponse(
+    @JsonProperty("uuid")
+    val uuid: String?,
+    @JsonProperty("display")
+    val display: String?,
+    @JsonProperty("appointmentType")
+    val appointmentType: Dbtypes?,
+    @JsonProperty("reason")
+    val reason: String?,
+    @JsonProperty("timeSlot")
+    val timeSlot: DbTimeSlot?,
+    @JsonProperty("status")
+    val status: DbStatus?
+)
+data class DbModifyRequestAppointmentResponse(
+    @JsonProperty("uuid")
+    val uuid: String?,
+    @JsonProperty("display")
+    val display: String?,
+    @JsonProperty("appointmentType")
+    val appointmentType: Dbtypes?,
+    @JsonProperty("notes")
+    val notes: String?,
+    @JsonProperty("status")
+    val status: String?,
+    @JsonProperty("requestedOn")
+    val requestedOn: String?,
+    @JsonProperty("provider")
+    val provider: DbProviderResults?,
+    @JsonProperty("location")
+    val location: DbLocation?,
+    @JsonProperty("requestedBy")
+    val requestedBy: DbProviderResults?
+)
+
+// Visit History Data Classes
+data class DbVisitResponse(
+    @JsonProperty("results")
+    val results: List<DbVisit>
+)
+
+data class DbVisit(
+    @JsonProperty("uuid")
+    val uuid: String?,
+    @JsonProperty("display")
+    val display: String?,
+    @JsonProperty("startDatetime")
+    val startDatetime: String?,
+    @JsonProperty("stopDatetime")
+    val stopDatetime: String?,
+    @JsonProperty("visitType")
+    val visitType: DbVisitType?,
+    @JsonProperty("location")
+    val location: DbVisitLocation?,
+    @JsonProperty("patient")
+    val patient: DbPatientData?,
+    @JsonProperty("encounters")
+    val encounters: List<DbEncounter>?,
+    @JsonProperty("attributes")
+    val attributes: List<DbVisitAttribute>?
+)
+
+data class DbVisitType(
+    @JsonProperty("uuid")
+    val uuid: String?,
+    @JsonProperty("display")
+    val display: String?
+)
+
+data class DbVisitLocation(
+    @JsonProperty("uuid")
+    val uuid: String?,
+    @JsonProperty("display")
+    val display: String?
+)
+
+data class DbEncounter(
+    @JsonProperty("uuid")
+    val uuid: String?,
+    @JsonProperty("display")
+    val display: String?,
+    @JsonProperty("encounterDatetime")
+    val encounterDatetime: String?,
+    @JsonProperty("encounterType")
+    val encounterType: DbEncounterType?,
+    @JsonProperty("provider")
+    val provider: DbProviderResults?
+)
+
+data class DbEncounterType(
+    @JsonProperty("uuid")
+    val uuid: String?,
+    @JsonProperty("display")
+    val display: String?
+)
+
+data class DbVisitAttribute(
+    @JsonProperty("attributeType")
+    val attributeType: DbAttributeType?,
+    @JsonProperty("value")
+    val value: String?
+)
+
+data class DbAttributeType(
+    @JsonProperty("uuid")
+    val uuid: String?,
+    @JsonProperty("display")
+    val display: String?
+)
+
+data class DbVisitHistoryDetail(
+    val visitUuid: String?,
+    val visitDisplay: String?,
+    val visitStartDate: String?,
+    val visitStopDate: String?,
+    val visitType: String?,
+    val location: DbLocation?,
+    val provider: String?,
+    val appointmentUuid: String?,
+    val appointmentType: String?,
+    val appointmentStatus: String?,
+    val appointmentReason: String?,
+    val encounters: List<DbEncounterInfo>?
+)
+
+data class DbEncounterInfo(
+    val encounterUuid: String?,
+    val encounterDisplay: String?,
+    val encounterDate: String?,
+    val encounterType: String?,
+    val provider: String?
+)
+
+data class DbVisitHistoryResponse(
+    val count: Int,
+    val results: List<DbVisitHistoryDetail>
 )

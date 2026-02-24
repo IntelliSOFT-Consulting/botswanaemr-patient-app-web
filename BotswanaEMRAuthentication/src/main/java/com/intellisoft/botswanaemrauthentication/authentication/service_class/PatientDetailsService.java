@@ -31,9 +31,24 @@ public interface PatientDetailsService {
     //Get Drugs Details
     Results getDrugsDetails(String userId, String drugId);
 
+    //Get Vitals
+    Results getVitals(String userId);
+
+    //Get Visits
+    Results getVisits(String userId);
+
+    //Get Visit by Id
+    Results getVisitById(String userId, String visitId);
+
     Results refreshToken(DbRefreshToken refreshTokenRequest) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException;
 
     //Get Medical history
     Results getMedicalHistory(String userId);
+
+    //Link patient
+    Results linkPatient(LinkPatientRequest linkPatientRequest);
+
+    //Unlink patient
+    Results unlinkPatient(LinkPatientRequest linkPatientRequest);
 
 }

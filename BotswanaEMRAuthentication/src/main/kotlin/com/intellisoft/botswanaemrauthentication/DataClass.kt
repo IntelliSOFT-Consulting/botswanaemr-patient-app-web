@@ -81,6 +81,10 @@ data class UpdateUserDetails(
 
 
 )
+data class LinkPatientRequest(
+    val phoneNumber: String,
+    val nationalPassportNo: String
+)
 
 data class DbPerson(
     val names:List<DbName>,
@@ -159,6 +163,11 @@ enum class NotificationDetails(){
 data class DbResults(
     val message: String
 )
+data class LinkPatientResponse(
+    val message: String,
+    val patient: DbPatientDetails,
+    val alreadyLinked: Boolean = false
+)
 data class DbPatientDetails(
 
     val id: String,
@@ -173,7 +182,8 @@ data class DbPatientDetails(
     val gender: String,
     val username: String,
     val patient: Boolean,
-    val profileUrl: String?
+    val profileUrl: String?,
+    val nationalPassportNo: String?
 
 )
 
@@ -263,6 +273,38 @@ data class DbOpenMrsData(
     val birthtime: String,
     val deathdateEstimated: String,
 )
+data class DbOpenMrsPatientResult(
+    val results: List<DbOpenMrsPatientInfo>
+)
+data class DbOpenMrsPatientInfo(
+    val uuid: String,
+    val identifiers: List<DbOpenMrsIdentifier>,
+    val person: DbOpenMrsPersonData
+)
+data class DbOpenMrsIdentifier(
+    val identifier: String,
+    val identifierType: DbOpenMrsIdentifierType,
+    val preferred: Boolean
+)
+data class DbOpenMrsIdentifierType(
+    val display: String
+)
+data class DbOpenMrsPersonData(
+    val uuid: String,
+    val attributes: List<DbOpenMrsAttribute>?
+)
+data class DbOpenMrsAttribute(
+    val value: Any, // Can be String or Object (for complex attributes like Education, Employment Sector)
+    val attributeType: DbOpenMrsAttributeType
+)
+data class DbOpenMrsAttributeType(
+    val display: String
+)
+data class DbOpenMrsPatientSearchResult(
+    val openMrsUuid: String,
+    val openMrsId: String, // The OpenMRS ID (PIN)
+    val phoneNumber: String?
+)
 data class DbOpenMrsLocal(
     val personDetails : Any,
     val patientDetails: Any?
@@ -315,10 +357,97 @@ data class DbConditionDataResults(
     val additionalDetail: String?
 )
 
+data class DbVitalsResults(
+    val results: List<DbVitalObservation>
+)
+
+data class DbVitalObservation(
+    val uuid: String?,
+    val display: String?,
+    val concept: DbVitalConcept?,
+    val obsDatetime: String?,
+    val value: Any?,
+    val encounter: DbVitalEncounter?,
+    val location: DbVitalLocation?
+)
+
+data class DbVitalConcept(
+    val uuid: String?,
+    val display: String?
+)
+
+data class DbVitalEncounter(
+    val uuid: String?,
+    val display: String?
+)
+
+data class DbVitalLocation(
+    val uuid: String?,
+    val display: String?
+)
+
+data class DbVisitResponse(
+    val results: List<DbVisitRaw>?
+)
+
+data class DbVisitRaw(
+    val uuid: String?,
+    val display: String?,
+    val startDatetime: String?,
+    val stopDatetime: String?,
+    val location: DbVitalLocation?,
+    val visitType: DbVisitType?,
+    val encounters: List<DbEncounterRaw>?
+)
+
+data class DbVisitType(
+    val uuid: String?,
+    val display: String?
+)
+
+data class DbEncounterRaw(
+    val uuid: String?,
+    val display: String?,
+    val encounterDatetime: String?,
+    val encounterType: DbEncounterType?,
+    val location: DbVitalLocation?
+)
+
+data class DbEncounterType(
+    val uuid: String?,
+    val display: String?
+)
+
+data class DbVitalDataResults(
+    val conceptName: String?,
+    val value: String?,
+    val unit: String?,
+    val dateRecorded: String?,
+    val encounter: String?
+)
+
+data class VisitEncounterSummary(
+    val uuid: String?,
+    val display: String?,
+    val encounterType: String?,
+    val encounterDatetime: String?,
+    val location: String?
+)
+
+data class VisitSummary(
+    val uuid: String?,
+    val visitType: String?,
+    val startDatetime: String?,
+    val stopDatetime: String?,
+    val location: String?,
+    val encounters: List<VisitEncounterSummary>
+)
+
 data class DbMedicalHistory(
     var allergys: Any? = emptyList<DbAllergyDataResults>(),
     var conditions: Any? = emptyList<DbConditionDataResults>(),
-    var drugs : Any? = emptyList<DbDrugs>()
+    var drugs : Any? = emptyList<DbDrugs>(),
+    var vitals: Any? = emptyList<DbVitalDataResults>()
 ){
     fun setAllergy(allergy: List<Any>){
         this.allergys = allergy
@@ -328,5 +457,8 @@ data class DbMedicalHistory(
     }
     fun setDrug(drug: List<Any>){
         this.drugs = drug
+    }
+    fun setVitals(vitals: List<Any>){
+        this.vitals = vitals
     }
 }

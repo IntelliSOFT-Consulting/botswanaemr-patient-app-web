@@ -105,7 +105,6 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     @Override
     public Results addPatient(RegisterRequest registerRequest) throws NoSuchAlgorithmException, KeyManagementException, KeyStoreException {
 
-//        Check if email address exists
         String emailAddress = registerRequest.getEmailAddress();
         String password = registerRequest.getPassword();
         String confirmPassword = registerRequest.getConfirmPassword();
@@ -120,7 +119,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
 
             if (!isEmailAddress){
 
-//                Email address does not exist, add user using keycloak
+                // Email address does not exist, add user using keycloak
                 String userId = createKeycloakUser(registerRequest).getUserId();
 
                 if (!userId.equals("")){
@@ -128,7 +127,13 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                     String dateOfBirth = registerRequest.getDateOfBirth();
                     String convertedDob = formatterClass.convertDate(dateOfBirth);
 
-//                    String openMrsId =
+                // String openMrsId =
+
+                    // Default patient identification number to empty string if missing
+                    String patientIdentificationNo = registerRequest.getPatientIdentificationNo();
+                    if (patientIdentificationNo == null) {
+                        patientIdentificationNo = "";
+                    }
 
                     //User has been saved in keycloak, save them to our db
                     PatientDetails patientDetails = new PatientDetails(
@@ -137,7 +142,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                             registerRequest.getPhoneNumber(),
                             convertedDob,
                             registerRequest.getGender(),
-                            registerRequest.getPatientIdentificationNo(),
+                            patientIdentificationNo,
                             registerRequest.getNationalPassportNo(),
                             registerRequest.getIdentificationType(),
                             registerRequest.getEmailAddress(),
@@ -147,20 +152,44 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                             registerRequest.getImageUrl());
 
                     String notification = "";
-                    if (registerRequest.getPatientIdentificationNo() != null){
+                    // Search OpenMRS by national passport number
+                    String nationalPassportNo = registerRequest.getNationalPassportNo();
+                    if (nationalPassportNo != null && !nationalPassportNo.trim().isEmpty()){
 
-                        //Get the patient details from openmrs
-                        Results results = networkCall.getPatientDetails(
-                                registerRequest.getPatientIdentificationNo(),
-                                registerRequest.getFirstName(),
-                                registerRequest.getLastName());
+                        //Search for patient in OpenMRS by national passport number
+                        Results results = networkCall.searchPatientByNationalPassport(nationalPassportNo);
                         if (results.getCode() == 200){
-                            //Patient details found
-                            String openMrsUUId = (String) results.getMessage();
-                            registerRequest.setPatientIdentificationNo(openMrsUUId);
-                            notification = notification + "\n" + " You can now access your medical records.";
+                            //Patient found in OpenMRS
+                            DbOpenMrsPatientSearchResult searchResult = (DbOpenMrsPatientSearchResult) results.getMessage();
+                            
+                            // Verify phone number matches
+                            String openMrsPhoneNumber = searchResult.getPhoneNumber();
+                            String providedPhoneNumber = registerRequest.getPhoneNumber();
+                            
+                            if (openMrsPhoneNumber != null && openMrsPhoneNumber.equals(providedPhoneNumber)){
+                                // Phone matches - link patient
+                                String openMrsId = searchResult.getOpenMrsId();
+                                String openMrsUUId = searchResult.getOpenMrsUuid();
+                                
+                                patientDetails.setPatientIdentificationNo(openMrsId);
+                                patientDetails.setOpenMrsId(openMrsUUId);
+                                patientDetails.setPatient(true);
+                                
+                                notification = notification + "\n" + "Patient linked successfully. You can now access your medical records.";
+                            } else {
+                                // Phone doesn't match - proceed without linking
+                                patientDetails.setPatient(false);
+                                notification = notification + "\n" + "Patient linking was not done. The phone number does not match the one in OpenMRS.";
+                            }
+                        }else {
+                            // Patient not found in OpenMRS - proceed without linking
+                            patientDetails.setPatient(false);
+                            notification = notification + "\n" + "Patient linking was not done. The provided national passport number could not be found in OpenMRS.";
                         }
 
+                    } else {
+                        // No national passport number provided
+                        patientDetails.setPatient(false);
                     }
 
                     patientDetails.setId(userId);
@@ -190,7 +219,11 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                     createNotification(dbNotification);
 
                     return new Results(201,
-                            "Patient has been saved successfully. Check email for verification link.");
+                            "Patient registration completed successfully.\n" +
+                                    "\n" +
+                                    "A verification link has been dispatched to the registered email address. Kindly review your inbox (and spam folder) within the next 5 minutes to activate the account and proceed.\n" +
+                                    "\n" +
+                                    "If the email is not received shortly, please confirm the address provided or request a new verification link.");
 
                 }else {
 
@@ -518,19 +551,16 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
 
                     if(dbOtpCode.equals(requestOtpCode)){
 
-                        Keycloak keycloak = KeycloakBuilder
-                                .builder()
+                        Keycloak keycloak = KeycloakBuilder.builder()
                                 .serverUrl(authServerUrl)
-                                .grantType(PASSWORD)
                                 .realm(realm)
+                                .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
                                 .clientId(clientId)
-                                .username(username).password(password)
+                                .clientSecret(clientSecret)
                                 .resteasyClient(
                                         new ResteasyClientBuilder()
-                                                .sslContext(new SSLContextBuilder().loadTrustMaterial(null,
-                                                        TrustAllStrategy.INSTANCE).build())
-                                                .hostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                                                .connectionPoolSize(10).build())
+                                                .connectionPoolSize(10)
+                                                .build())
                                 .build();
 
                         keycloak.tokenManager().getAccessToken();
@@ -761,7 +791,8 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                     patientDetails.getGender(),
                     patientDetails.getUsername(),
                     patientDetails.isPatient(),
-                    patientDetails.getProfileUrl()
+                    patientDetails.getProfileUrl(),
+                    patientDetails.getNationalPassportNo()
                     );
 
             results = new Results(200, dbPatientDetails);
@@ -797,6 +828,10 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
 
             String openMrsId = patientDetails.getOpenMrsId();
 
+            if (openMrsId == null || openMrsId.isEmpty()) {
+                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
+            }
+
             System.out.println("======");
             System.out.println(openMrsId);
 
@@ -815,6 +850,11 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
         if (patientDetails != null){
 
             String openMrsId = patientDetails.getOpenMrsId();
+            
+            if (openMrsId == null || openMrsId.isEmpty()) {
+                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
+            }
+            
             Results conditionsResults = networkCall.getPatientAllergyDetails(openMrsId);
 
             if (conditionsResults.getCode() == 200){
@@ -834,6 +874,11 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
         if (patientDetails != null){
 
             String openMrsId = patientDetails.getOpenMrsId();
+            
+            if (openMrsId == null || openMrsId.isEmpty()) {
+                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
+            }
+            
             return networkCall.getPatientDrugDetails(openMrsId);
 
         }else {
@@ -847,10 +892,65 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
         if (patientDetails != null){
 
             String openMrsId = patientDetails.getOpenMrsId();
+            
+            if (openMrsId == null || openMrsId.isEmpty()) {
+                return new Results(200, new DbResults("Linking has not been done"));
+            }
+            
             Results conditionsResults = networkCall.getPatientDrugDetailsData(openMrsId, drugId);
             return new Results(200, conditionsResults);
 
         }else {
+            return new Results(400, new DbResults("We could not find the user."));
+        }
+    }
+
+    @Override
+    public Results getVitals(String userId) {
+        PatientDetails patientDetails = getPatientData(userId);
+        if (patientDetails != null){
+
+            String openMrsId = patientDetails.getOpenMrsId();
+            
+            if (openMrsId == null || openMrsId.isEmpty()) {
+                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
+            }
+            
+            return networkCall.getPatientVitalsDetails(openMrsId);
+
+        }else {
+            return new Results(400, new DbResults("We could not find the user."));
+        }
+    }
+
+    @Override
+    public Results getVisits(String userId) {
+        PatientDetails patientDetails = getPatientData(userId);
+        if (patientDetails != null){
+            String openMrsId = patientDetails.getOpenMrsId();
+            
+            if (openMrsId == null || openMrsId.isEmpty()) {
+                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
+            }
+            
+            return networkCall.getPatientVisits(openMrsId);
+        } else {
+            return new Results(400, new DbResults("We could not find the user."));
+        }
+    }
+
+    @Override
+    public Results getVisitById(String userId, String visitId) {
+        PatientDetails patientDetails = getPatientData(userId);
+        if (patientDetails != null){
+            String openMrsId = patientDetails.getOpenMrsId();
+            
+            if (openMrsId == null || openMrsId.isEmpty()) {
+                return new Results(200, new DbResults("Linking has not been done"));
+            }
+            
+            return networkCall.getVisitById(visitId);
+        } else {
             return new Results(400, new DbResults("We could not find the user."));
         }
     }
@@ -904,6 +1004,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
         Results conditions = getConditions(userId);
         Results allergy = getAllergy(userId);
         Results drugs = getDrugs(userId);
+        Results vitals = getVitals(userId);
 
         DbMedicalHistory dbMedicalHistory = new DbMedicalHistory();
 
@@ -922,12 +1023,160 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
             List<Object> drugsData = dbResultsDrugsData.getResults();
             dbMedicalHistory.setDrug(drugsData);
         }
+        if (vitals.getCode() == 200){
+            DbResultsData dbResultsVitalsData = (DbResultsData) vitals.getMessage();
+            List<Object> vitalsData = dbResultsVitalsData.getResults();
+            dbMedicalHistory.setVitals(vitalsData);
+        }
 
 
         return new Results(200, dbMedicalHistory);
 
     }
 
+    @Override
+    public Results linkPatient(LinkPatientRequest linkPatientRequest) {
+        String nationalPassportNo = linkPatientRequest.getNationalPassportNo();
+        String phoneNumber = linkPatientRequest.getPhoneNumber();
+
+        // Search OpenMRS by national passport number
+        Results searchResults = networkCall.searchPatientByNationalPassport(nationalPassportNo);
+        
+        if (searchResults.getCode() != 200) {
+            String errorMessage = "Patient not found in OpenMRS with the provided national passport number";
+            if (searchResults.getMessage() != null) {
+                errorMessage = searchResults.getMessage().toString();
+            }
+            System.out.println("Link patient failed for National ID: " + nationalPassportNo + ". Error: " + errorMessage);
+            return new Results(400, errorMessage);
+        }
+
+        // Extract patient information from OpenMRS
+        DbOpenMrsPatientSearchResult openMrsPatient = (DbOpenMrsPatientSearchResult) searchResults.getMessage();
+        String openMrsPhoneNumber = openMrsPatient.getPhoneNumber();
+        
+        // Normalize phone numbers (remove spaces) before comparison
+        String normalizedOpenMrsPhone = normalizePhoneNumber(openMrsPhoneNumber);
+        String normalizedProvidedPhone = normalizePhoneNumber(phoneNumber);
+        
+        // Verify phone number matches
+        if (normalizedOpenMrsPhone == null || !normalizedOpenMrsPhone.equals(normalizedProvidedPhone)) {
+            return new Results(400, "Phone number does not match the one in OpenMRS");
+        }
+
+        // Find patient in local database by national passport number
+        PatientDetails patientDetails = patientDetailsRepository.findByNationalPassportNo(nationalPassportNo);
+        
+        if (patientDetails == null) {
+            return new Results(400, "Patient not found in local database with the provided national passport number");
+        }
+
+        // Check if patient is already linked
+        boolean isAlreadyLinked = patientDetails.isPatient() && 
+                                   patientDetails.getOpenMrsId() != null && 
+                                   !patientDetails.getOpenMrsId().isEmpty();
+        
+        if (isAlreadyLinked) {
+            // Patient is already linked, return patient info with already linked message
+            Results patientResults = getPatientResultsData(patientDetails);
+            if (patientResults.getCode() == 200) {
+                DbPatientDetails dbPatientDetails = (DbPatientDetails) patientResults.getMessage();
+                LinkPatientResponse linkResponse = new LinkPatientResponse(
+                    "Patient is already linked",
+                    dbPatientDetails,
+                    true
+                );
+                return new Results(200, linkResponse);
+            } else {
+                return new Results(400, "Failed to retrieve patient details");
+            }
+        }
+
+        // Update patient identification number with OpenMRS ID
+        String openMrsId = openMrsPatient.getOpenMrsId();
+        patientDetails.setPatientIdentificationNo(openMrsId);
+        patientDetails.setOpenMrsId(openMrsPatient.getOpenMrsUuid());
+        patientDetails.setPatient(true);
+
+        // Save the updated patient details
+        PatientDetails updatedPatientDetails = updateUserDetails(patientDetails);
+        if (updatedPatientDetails != null) {
+            // Return patient info with success message
+            Results patientResults = getPatientResultsData(updatedPatientDetails);
+            if (patientResults.getCode() == 200) {
+                DbPatientDetails dbPatientDetails = (DbPatientDetails) patientResults.getMessage();
+                LinkPatientResponse linkResponse = new LinkPatientResponse(
+                    "Patient linked successfully",
+                    dbPatientDetails,
+                    false
+                );
+                return new Results(200, linkResponse);
+            } else {
+                return new Results(400, "Failed to retrieve patient details");
+            }
+        } else {
+            return new Results(400, "Failed to update patient details");
+        }
+    }
+
+    @Override
+    public Results unlinkPatient(LinkPatientRequest linkPatientRequest) {
+        String nationalPassportNo = linkPatientRequest.getNationalPassportNo();
+        String phoneNumber = linkPatientRequest.getPhoneNumber();
+
+        // Search OpenMRS by national passport number (for verification)
+        Results searchResults = networkCall.searchPatientByNationalPassport(nationalPassportNo);
+        
+        if (searchResults.getCode() != 200) {
+            String errorMessage = searchResults.getMessage() != null ? 
+                searchResults.getMessage().toString() : 
+                "Patient not found in OpenMRS with the provided national passport number";
+            return new Results(400, errorMessage);
+        }
+
+        // Extract patient information from OpenMRS
+        DbOpenMrsPatientSearchResult openMrsPatient = (DbOpenMrsPatientSearchResult) searchResults.getMessage();
+        String openMrsPhoneNumber = openMrsPatient.getPhoneNumber();
+        
+        // Normalize phone numbers (remove spaces) before comparison
+        String normalizedOpenMrsPhone = normalizePhoneNumber(openMrsPhoneNumber);
+        String normalizedProvidedPhone = normalizePhoneNumber(phoneNumber);
+        
+        // Verify phone number matches
+        if (normalizedOpenMrsPhone == null || !normalizedOpenMrsPhone.equals(normalizedProvidedPhone)) {
+            return new Results(400, "Phone number does not match the one in OpenMRS");
+        }
+
+        // Find patient in local database by national passport number
+        PatientDetails patientDetails = patientDetailsRepository.findByNationalPassportNo(nationalPassportNo);
+        
+        if (patientDetails == null) {
+            return new Results(400, "Patient not found in local database with the provided national passport number");
+        }
+
+        // Clear linking: set isPatient = false, openMrsId = null, patientIdentificationNo = null
+        patientDetails.setPatient(false);
+        patientDetails.setOpenMrsId(null);
+        patientDetails.setPatientIdentificationNo(null);
+
+        // Save the updated patient details
+        PatientDetails updatedPatientDetails = updateUserDetails(patientDetails);
+        if (updatedPatientDetails != null) {
+            return new Results(200, new DbResults("Patient unlinked successfully"));
+        } else {
+            return new Results(400, "Failed to update patient details");
+        }
+    }
+
+    /**
+     * Normalize phone number by removing all spaces
+     * @param phoneNumber The phone number to normalize
+     * @return Normalized phone number without spaces, or null if input is null
+     */
+    private String normalizePhoneNumber(String phoneNumber) {
+        if (phoneNumber == null) return null;
+        return phoneNumber.replaceAll("\\s+", "");
+    }
 
     public void addRealmRoleToUser(String keyCloakId, String role_name)
             throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
@@ -985,7 +1234,8 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                     patientDetails.getGender(),
                     patientDetails.getUsername(),
                     patientDetails.isPatient(),
-                    patientDetails.getProfileUrl()
+                    patientDetails.getProfileUrl(),
+                    patientDetails.getNationalPassportNo()
             );
             return new Results(200, dbPatientDetails);
         }else {
@@ -1052,7 +1302,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
         patientDetails.setOneTimeLink(verificationLink);
         patientDetails.setOtpRequestedTime(new Date());
 
-        String baseUrl = "https://botswanaemrdev.intellisoftkenya.com/";
+        String baseUrl = "https://172.105.157.130/";
 
         return new DbVerificationLink(baseUrl, verificationLink, patientDetails);
 

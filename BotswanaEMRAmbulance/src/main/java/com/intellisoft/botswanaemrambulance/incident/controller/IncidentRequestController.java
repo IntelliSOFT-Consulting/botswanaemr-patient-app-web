@@ -42,7 +42,7 @@ public class IncidentRequestController {
 
     //Get All incident requests
     @Operation(summary = "Get all incident requests", description = "Get all incident requests")
-    @GetMapping(value = "/")
+    @GetMapping()
     public ResponseEntity<?> getPagedAmbulances(
             @RequestParam("pageNo") int pageNo,
             @RequestParam("itemNo") int itemNo,

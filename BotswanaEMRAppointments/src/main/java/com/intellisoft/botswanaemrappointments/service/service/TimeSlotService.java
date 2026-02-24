@@ -1,6 +1,7 @@
 package com.intellisoft.botswanaemrappointments.service.service;
 
 import com.intellisoft.botswanaemrappointments.DbCancelAppointment;
+import com.intellisoft.botswanaemrappointments.DbModifyAppointment;
 import com.intellisoft.botswanaemrappointments.DbMyAppointments;
 import com.intellisoft.botswanaemrappointments.DbTimeSlotData;
 import com.intellisoft.botswanaemrappointments.Results;
@@ -58,8 +59,21 @@ public interface TimeSlotService {
     Results cancelRequestAppointment(DbCancelAppointment dbCancelAppointment);
     Results cancelScheduledAppointment(DbCancelAppointment dbCancelAppointment);
 
+    /**
+     * Modify Appointment
+     */
+    Results modifyScheduledAppointment(String appointmentId, DbModifyAppointment dbModifyAppointment);
+    Results modifyRequestAppointment(String appointmentId, DbModifyAppointment dbModifyAppointment);
+
     Results getFacilityProviders(String queryName);
     Results getFacilityServices();
     Results getFacilityLocations();
+
+    /**
+     * Get visit history for patient - visits linked to completed appointments
+     * @param params Query parameters (patient, fromDate, toDate, limit)
+     * @return Visit history with appointment details
+     */
+    Results getVisitHistory(Map<String, String> params);
 
 }
