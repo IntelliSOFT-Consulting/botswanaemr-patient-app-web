@@ -1,7 +1,9 @@
 package com.intellisoft.botswanaemrauthentication
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.intellisoft.botswanaemrauthentication.authentication.entity.PatientDetails
+import java.time.OffsetDateTime
 import java.util.ListResourceBundle
 import java.util.Scanner
 import java.util.UUID
@@ -62,7 +64,7 @@ data class RegisterRequest(
     val dateOfBirth: String ,
     val gender: String ,
     var patientIdentificationNo: String? ,
-    val nationalPassportNo: String ,
+    val nationalPassportNo: String? ,
     val username: String ,
     val identificationType: String,
     val imageUrl: String,
@@ -273,32 +275,40 @@ data class DbOpenMrsData(
     val birthtime: String,
     val deathdateEstimated: String,
 )
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbOpenMrsPatientResult(
-    val results: List<DbOpenMrsPatientInfo>
+    val results: List<DbOpenMrsPatientInfo>? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbOpenMrsPatientInfo(
-    val uuid: String,
-    val identifiers: List<DbOpenMrsIdentifier>,
-    val person: DbOpenMrsPersonData
+    val uuid: String? = null,
+    val identifiers: List<DbOpenMrsIdentifier>? = null,
+    val person: DbOpenMrsPersonData? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbOpenMrsIdentifier(
-    val identifier: String,
-    val identifierType: DbOpenMrsIdentifierType,
-    val preferred: Boolean
+    val identifier: String? = null,
+    val identifierType: DbOpenMrsIdentifierType? = null,
+    val preferred: Boolean = true
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbOpenMrsIdentifierType(
-    val display: String
+    val display: String? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbOpenMrsPersonData(
-    val uuid: String,
-    val attributes: List<DbOpenMrsAttribute>?
+    val uuid: String? = null,
+    val attributes: List<DbOpenMrsAttribute>? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbOpenMrsAttribute(
-    val value: Any, // Can be String or Object (for complex attributes like Education, Employment Sector)
-    val attributeType: DbOpenMrsAttributeType
+    val value: Any? = null, // Can be String or Object (for complex attributes like Education, Employment Sector)
+    val attributeType: DbOpenMrsAttributeType ? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbOpenMrsAttributeType(
-    val display: String
+    val display: String? = null
 )
 data class DbOpenMrsPatientSearchResult(
     val openMrsUuid: String,
@@ -462,3 +472,60 @@ data class DbMedicalHistory(
         this.vitals = vitals
     }
 }
+//New Conditions data class
+data class PatientCondition(
+    val condition: String,
+    val clinicalStatus: String,
+    val recordedBy: String,
+    val recordedDate: OffsetDateTime
+)
+
+data class PatientConditionsResponse(
+    val patientId: String,
+    val conditions: List<PatientCondition>
+)
+//data class FhirConditionBundle(
+//    @JsonProperty("entry"  )
+//    val entry: List<Entry>? = null
+//) {
+//    data class Entry(
+//        @JsonProperty("resource"  )
+//        val resource: ConditionResource? = null
+//    )
+//}
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class FhirConditionBundle(
+    val entry: List<Entry>? = null
+)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Entry(
+    val resource: ConditionResource? = null
+)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class ConditionResource(
+    val extension: List<Extension>? = null,
+    val clinicalStatus: ClinicalStatus? = null,
+    val recorder: Recorder? = null,
+    val recordedDate: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Extension(
+    val url: String? = null,
+    val valueString: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class ClinicalStatus(
+    val coding: List<Coding>? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Coding(
+    val code: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Recorder(
+    val display: String? = null
+)
