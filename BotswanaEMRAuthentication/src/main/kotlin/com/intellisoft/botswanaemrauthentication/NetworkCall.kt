@@ -393,6 +393,7 @@ class NetworkCall(
                         for (dbAllergyData in bodyResult) {
 
                             val display = dbAllergyData.display
+                            val severity = dbAllergyData.severity ?: ""
 
                             val reactionList = ArrayList<String>()
 
@@ -405,8 +406,10 @@ class NetworkCall(
                                 reactionList.add(reaction)
                             }
                             reactionList.add(comment?: "")
-                            val dbAllergyDataResults = DbAllergyDataResults(display ?: "", reactionList)
+                            val dbAllergyDataResults = DbAllergyDataResults(display ?: "", reactionList, severity, "")
                             dbAllergyDataResultsList.add(dbAllergyDataResults)
+                            // Remove duplicate reactions
+                            dbAllergyDataResultsList.distinct()
                         }
 
                     }

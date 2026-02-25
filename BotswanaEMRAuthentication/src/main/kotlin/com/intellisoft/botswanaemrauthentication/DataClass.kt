@@ -225,6 +225,7 @@ data class DbAllergyResults(
 data class DbAllergyData(
     val display: String? = null,
     val comment: String? = null,
+    val severity: String? = null,
     val uuid: String? = null,
     val reactions: List<DbAllergyReactions>? = null
 )
@@ -363,7 +364,10 @@ data class DbResultsData(
 
 data class DbAllergyDataResults(
     val name: String,
-    val reactions: List<String>
+    val reactions: List<String>,
+    val severity: String,
+    val dateIdentified: String,
+
 )
 data class DbConditionDataResults(
     val name: String?,
