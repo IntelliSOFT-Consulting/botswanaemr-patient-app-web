@@ -228,6 +228,33 @@ public class UserController {
 
     }
 
+    /**
+     * Vitals
+     * @return
+     */
+    @GetMapping(value = "vitals")
+    public ResponseEntity<?> getVitals(){
+
+        Optional<String> userId = formatterClass.getCurrentUserLogin();
+
+        try {
+
+            Results results;
+            if (userId.isPresent()){
+                results = patientDetailsService.getVitals(userId.get());
+            }else {
+                results = new Results(400, "We could not find the user");
+            }
+            return formatterClass.getResponse(results);
+
+        }catch (Exception e){
+            Results results = new Results(400, " Please try again after sometime: " + e.toString());
+            return formatterClass.getResponse(results);
+
+        }
+
+    }
+
     //Get combined conditions, allergy and drugs
     @GetMapping(value = "medical-history")
     public ResponseEntity<?> getMedicalHistory(){

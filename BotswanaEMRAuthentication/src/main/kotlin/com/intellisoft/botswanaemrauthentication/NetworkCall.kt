@@ -573,140 +573,62 @@ class NetworkCall(
 
     //Get vitals
     fun getPatientVitalsDetails(openMrsId: String) = runBlocking { getPatientVitals(openMrsId) }
-    private suspend fun getPatientVitals(openMrsId: String): Results{
+    suspend fun getPatientVitals(openMrsId: String): Results {
+        return try {
+            val response = networkRequestInterface.getVitals(openMrsId, "full")
 
-        var details: Any
-        var code: Int
-
-        // Vital signs keywords for filtering
-        val vitalSignsKeywords = listOf(
-            "weight", "height", "blood pressure", "temperature", "temp", 
-            "pulse", "heart rate", "respiratory", "oxygen", "systolic", 
-            "diastolic", "bmi", "bp", "hr", "rr", "spo2", "o2"
-        )
-
-        try {
-            val retrofitCall = networkRequestInterface?.getVitals(openMrsId, "full")
-            if (retrofitCall != null){
-
-                if (retrofitCall.isSuccessful){
-
-                    code = 200
-                    val resultBody = retrofitCall.body()
-                    if (resultBody != null){
-
-                        val dbVitalDataResultsList = ArrayList<DbVitalDataResults>()
-                        val bodyResult = resultBody.results
-
-                        if (bodyResult.isNotEmpty()){
-
-                            for (observation in bodyResult) {
-                                val conceptDisplay = observation.concept?.display?.lowercase() ?: ""
-                                
-                                // Check if this observation is a vital sign
-                                val isVitalSign = vitalSignsKeywords.any { keyword ->
-                                    conceptDisplay.contains(keyword, ignoreCase = true)
-                                }
-
-                                if (isVitalSign) {
-                                    val conceptName = observation.concept?.display ?: ""
-                                    val value = observation.value?.toString() ?: ""
-                                    
-                                    // Extract unit from concept display if available (e.g., "Weight (kg)" -> "kg")
-                                    var unit = ""
-                                    val unitMatch = Regex("\\(([^)]+)\\)").find(conceptName)
-                                    if (unitMatch != null) {
-                                        unit = unitMatch.groupValues[1]
-                                    }
-                                    
-                                    // Format date
-                                    var convertedDate = ""
-                                    if (observation.obsDatetime != null) {
-                                        try {
-                                            // Try parsing as ISO instant first (handles Z suffix)
-                                            val instant = Instant.parse(observation.obsDatetime)
-                                            val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
-                                            convertedDate = instant.atZone(ZoneId.systemDefault()).format(dateFormatter)
-                                        } catch (e: Exception) {
-                                            // Try with offset format (handles +0000)
-                                            try {
-                                                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-                                                val instant = Instant.from(formatter.parse(observation.obsDatetime))
-                                                val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
-                                                convertedDate = instant.atZone(ZoneId.systemDefault()).format(dateFormatter)
-                                            } catch (e2: Exception) {
-                                                // Try without milliseconds
-                                                try {
-                                                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-                                                    val instant = Instant.from(formatter.parse(observation.obsDatetime))
-                                                    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
-                                                    convertedDate = instant.atZone(ZoneId.systemDefault()).format(dateFormatter)
-                                                } catch (e3: Exception) {
-                                                    convertedDate = observation.obsDatetime
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                    val encounterDisplay = observation.encounter?.display ?: ""
-                                    
-                                    val dbVitalDataResults = DbVitalDataResults(
-                                        conceptName = conceptName,
-                                        value = value,
-                                        unit = unit,
-                                        dateRecorded = convertedDate,
-                                        encounter = encounterDisplay
-                                    )
-                                    dbVitalDataResultsList.add(dbVitalDataResults)
-                                }
+            if (!response.isSuccessful) {
+                val msg = if (response.code() == 500) "We could not find any vitals." else "There is an issue processing the request."
+                Results(400, msg)
+            } else {
+                val body = response.body()
+                if (body == null || body.results.isEmpty()) {
+                    Results(400, "No vitals data found")
+                } else {
+                    val vitalDTOs = body.results.flatMap { result ->
+                        result.encounter?.obs.orEmpty().mapNotNull { obs ->
+                            obs.display?.let { display ->
+                                val (conceptName, value, unit) = parseConcept(display)
+                                val dateRecorded = formatDate(result.obsDatetime ?: result.encounter?.encounterDatetime)
+                                val encounterType = result.encounter?.encounterType?.display ?: ""
+                                val encounterProvider = result.encounter?.encounterProviders?.firstOrNull()?.display
+                                val location = result.location?.display
+                                PatientVitalDTO(conceptName, value, unit, dateRecorded, encounterType, encounterProvider, location)
                             }
-
                         }
-
-                        val dbResultsData = DbResultsData(dbVitalDataResultsList.size, dbVitalDataResultsList)
-
-                        code = 200
-                        details = dbResultsData
-
-                    }else{
-                        code = 400
-                        details = "No vitals data found"
                     }
-
-
-                }else{
-
-                    val errorCode = retrofitCall.code()
-                    println("------1 $errorCode")
-
-                    if (errorCode == 500){
-                        code = 400
-                        details = "We could not find any vitals."
-                    }else{
-                        code = 400
-                        details = "There is an issue processing the request."
-                    }
-
+                    Results(200, vitalDTOs)
                 }
-
-
-            }else{
-                code = 400
-                details = "The requested resource could not be found."
             }
-        }catch (e: Exception){
-
-            e.printStackTrace()
-
-            code = 400
-            details = "We could not process your request at the moment. Please try again after sometime."
-
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            Results(400, "We could not process your request at the moment. Please try again after sometime.")
         }
-
-        return Results(code, details)
-
     }
 
+    private fun parseConcept(display: String): Triple<String, String, String> {
+        // Example: "Weight (kg): 69.0"
+        val parts = display.split(":").map { it.trim() }
+        val conceptNameWithUnit = parts.getOrNull(0) ?: ""
+        val value = parts.getOrNull(1) ?: ""
+
+        val unitRegex = Regex("\\(([^)]+)\\)")
+        val unit = unitRegex.find(conceptNameWithUnit)?.groupValues?.get(1) ?: ""
+        val conceptName = conceptNameWithUnit.replace(unitRegex, "").trim()
+
+        return Triple(conceptName, value, unit)
+    }
+
+    private fun formatDate(dateStr: String?): String {
+        if (dateStr.isNullOrEmpty()) return ""
+        return try {
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+            val odt = OffsetDateTime.parse(dateStr, formatter)
+            odt.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))
+        } catch (e: Exception) {
+            dateStr
+        }
+    }
 
 
 

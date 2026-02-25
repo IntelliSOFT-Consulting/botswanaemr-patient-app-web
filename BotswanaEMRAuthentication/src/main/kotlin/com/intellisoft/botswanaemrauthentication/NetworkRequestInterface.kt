@@ -35,7 +35,7 @@ interface NetworkRequestInterface {
     suspend fun getDrugsDetails(@Path("order") order: String):Response<DbDrugsDetails>
 
     @GET("rest/v1/obs")
-    suspend fun getVitals(@Query("patient") patient: String, @Query("v") v: String):Response<DbVitalsResults>
+    suspend fun getVitals(@Query("patient") patient: String, @Query("v") v: String):Response<VitalsResponse>
 
     @GET("rest/v1/visit")
     suspend fun getVisits(@Query("patient") patient: String, @Query("v") v: String):Response<DbVisitResponse>

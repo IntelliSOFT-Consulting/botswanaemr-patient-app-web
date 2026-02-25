@@ -619,3 +619,60 @@ data class SimpleVisit(
     val stopDatetime: String?,
     val auditorDisplay: String?
 )
+
+//Vitals
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VitalsResponse(
+    val results: List<VitalObservationResult> = emptyList()
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VitalObservationResult(
+    val uuid: String? = null,
+    val display: String? = null,
+    val obsDatetime: String? = null,
+    val location: VitalLocation? = null,
+    val encounter: VitalEncounter? = null,
+    val status: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VitalLocation(
+    val display: String? = null,
+    val name: String? = null,
+    val country: String? = null,
+    val countyDistrict: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VitalEncounter(
+    val encounterDatetime: String? = null,
+    val encounterType: EncounterType? = null,
+    val obs: List<Obs>? = null,
+    val encounterProviders: List<EncounterProvider>? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EncounterType(
+    val display: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Obs(
+    val display: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EncounterProvider(
+    val display: String? = null
+)
+
+data class PatientVitalDTO(
+    val conceptName: String,
+    val value: String,
+    val unit: String,
+    val dateRecorded: String,
+    val encounterType: String,
+    val encounterProvider: String?,
+    val location: String?
+)
