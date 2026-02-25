@@ -478,7 +478,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                     dbVerificationLink.getVerificationLink());
 
 
-            return new Results(200, "Verification link has been sent to the email address.");
+            return new Results(200, "A verification email has been sent to your email and is valid for 5 minutes.");
 
 
         }else{
@@ -518,7 +518,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
             createNotification(dbNotification);
 
             return new Results(200,
-                    new DbResults("A reset password code has been sent to your email address within 5 minutes."));
+                    new DbResults("A verification email has been sent to your email and is valid for 5 minutes."));
 
         }else {
             //Email does not exist
