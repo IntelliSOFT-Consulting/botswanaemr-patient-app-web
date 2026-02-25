@@ -710,80 +710,42 @@ class NetworkCall(
 
 
 
-    fun getPatientVisits(openMrsId: String) = runBlocking { fetchPatientVisits(openMrsId) }
-    private suspend fun fetchPatientVisits(openMrsId: String): Results {
+    fun getPatientVisits(openMrsId: String) = runBlocking { fetchPatientVisitsBac(openMrsId) }
+    private suspend fun fetchPatientVisitsBac(openMrsId: String): Results {
         var details: Any
         var code: Int
 
         try {
-            val retrofitCall = networkRequestInterface?.getVisits(openMrsId, "full")
-            if (retrofitCall != null) {
+            val retrofitCall = networkRequestInterface.getVisits(openMrsId, "full")
 
-                if (retrofitCall.isSuccessful) {
-                    val resultBody = retrofitCall.body()
-                    if (resultBody != null) {
-                        val visitsRaw = resultBody.results ?: emptyList()
-                        val visitSummaries = visitsRaw.map { mapVisitSummary(it) }
+            if (retrofitCall.isSuccessful) {
+                val resultBody = retrofitCall.body()
+
+                if (resultBody != null) {
+                    val visitsRaw = resultBody.results
+                    val visitSummaries = visitsRaw?.map { mapVisitSummary(it) }
+                    if (visitSummaries != null) {
+
                         val dbResultsData = DbResultsData(visitSummaries.size, visitSummaries)
                         code = 200
                         details = dbResultsData
-                    } else {
+
+                    }else {
                         code = 400
                         details = "No visits found"
                     }
                 } else {
-                    val errorCode = retrofitCall.code()
-                    code = if (errorCode == 500) {
-                        404
-                    } else {
-                        400
-                    }
-                    details = "There is an issue processing the request."
+                    code = 400
+                    details = "No visits found"
                 }
             } else {
-                code = 400
-                details = "The requested resource could not be found."
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            code = 400
-            details = "We could not process your request at the moment. Please try again after sometime."
-        }
-
-        return Results(code, details)
-    }
-
-    fun getVisitById(visitId: String) = runBlocking { fetchVisitById(visitId) }
-    private suspend fun fetchVisitById(visitId: String): Results {
-        var details: Any
-        var code: Int
-
-        try {
-            val retrofitCall = networkRequestInterface?.getVisitById(visitId, "full")
-            if (retrofitCall != null) {
-
-                if (retrofitCall.isSuccessful) {
-                    val resultBody = retrofitCall.body()
-                    if (resultBody != null) {
-                        val visitSummary = mapVisitSummary(resultBody)
-                        code = 200
-                        details = visitSummary
-                    } else {
-                        code = 400
-                        details = "No visit found"
-                    }
+                val errorCode = retrofitCall.code()
+                code = if (errorCode == 500) {
+                    404
                 } else {
-                    val errorCode = retrofitCall.code()
-                    code = if (errorCode == 404) {
-                        404
-                    } else {
-                        400
-                    }
-                    details = "There is an issue processing the request."
+                    400
                 }
-            } else {
-                code = 400
-                details = "The requested resource could not be found."
+                details = "There is an issue processing the request."
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -794,16 +756,57 @@ class NetworkCall(
         return Results(code, details)
     }
 
-    private fun mapVisitSummary(visit: DbVisitRaw): VisitSummary {
-        val encounterSummaries = visit.encounters?.map { encounter ->
-            VisitEncounterSummary(
-                uuid = encounter.uuid,
-                display = encounter.display,
-                encounterType = encounter.encounterType?.display,
-                encounterDatetime = encounter.encounterDatetime,
-                location = encounter.location?.display
-            )
-        } ?: emptyList()
+//    fun getVisitById(visitId: String) = runBlocking { fetchVisitById(visitId) }
+//    private suspend fun fetchVisitById(visitId: String): Results {
+//        var details: Any
+//        var code: Int
+//
+//        try {
+//            val retrofitCall = networkRequestInterface?.getVisitById(visitId, "full")
+//            if (retrofitCall != null) {
+//
+//                if (retrofitCall.isSuccessful) {
+//                    val resultBody = retrofitCall.body()
+//                    if (resultBody != null) {
+//                        val visitSummary = mapVisitSummary(resultBody)
+//                        code = 200
+//                        details = visitSummary
+//                    } else {
+//                        code = 400
+//                        details = "No visit found"
+//                    }
+//                } else {
+//                    val errorCode = retrofitCall.code()
+//                    code = if (errorCode == 404) {
+//                        404
+//                    } else {
+//                        400
+//                    }
+//                    details = "There is an issue processing the request."
+//                }
+//            } else {
+//                code = 400
+//                details = "The requested resource could not be found."
+//            }
+//        } catch (e: Exception) {
+//            e.printStackTrace()
+//            code = 400
+//            details = "We could not process your request at the moment. Please try again after sometime."
+//        }
+//
+//        return Results(code, details)
+//    }
+
+    private fun mapVisitSummary(visit: VisitResponse): VisitSummary {
+//        val encounterSummaries = visit.encounters?.map { encounter ->
+//            VisitEncounterSummary(
+//                uuid = encounter.uuid,
+//                display = encounter.display,
+//                encounterType = encounter.encounterType?.display,
+//                encounterDatetime = encounter.encounterDatetime,
+//                location = encounter.location?.display
+//            )
+//        } ?: emptyList()
 
         return VisitSummary(
             uuid = visit.uuid,
@@ -811,7 +814,7 @@ class NetworkCall(
             startDatetime = visit.startDatetime,
             stopDatetime = visit.stopDatetime,
             location = visit.location?.display,
-            encounters = encounterSummaries
+            encounters = emptyList()
         )
     }
 

@@ -964,8 +964,11 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
             if (openMrsId == null || openMrsId.isEmpty()) {
                 return new Results(200, new DbResults("Linking has not been done"));
             }
-            
-            return networkCall.getVisitById(visitId);
+
+            return new Results(200, new DbResults("Try again after some time."));
+
+
+//            return networkCall.getVisitById(visitId);
         } else {
             return new Results(400, new DbResults("We could not find the user."));
         }

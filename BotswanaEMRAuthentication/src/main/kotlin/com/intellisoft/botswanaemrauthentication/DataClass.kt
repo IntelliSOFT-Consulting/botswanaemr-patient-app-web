@@ -405,19 +405,15 @@ data class DbVitalLocation(
     val display: String?
 )
 
-data class DbVisitResponse(
-    val results: List<DbVisitRaw>?
-)
-
-data class DbVisitRaw(
-    val uuid: String?,
-    val display: String?,
-    val startDatetime: String?,
-    val stopDatetime: String?,
-    val location: DbVitalLocation?,
-    val visitType: DbVisitType?,
-    val encounters: List<DbEncounterRaw>?
-)
+//data class DbVisitRaw(
+//    val uuid: String?,
+//    val display: String?,
+//    val startDatetime: String?,
+//    val stopDatetime: String?,
+//    val location: DbVitalLocation?,
+//    val visitType: DbVisitType?,
+//    val encounters: List<DbEncounterRaw>?
+//)
 
 data class DbVisitType(
     val uuid: String?,
@@ -537,4 +533,89 @@ data class Coding(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Recorder(
     val display: String? = null
+)
+
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class DbVisitResponse(
+    @JsonProperty("results")
+    val results: List<VisitResponse>? = null
+)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VisitResponse(
+
+    @JsonProperty("uuid")
+    val uuid: String? = null,
+
+    @JsonProperty("display")
+    val display: String? = null,
+
+    @JsonProperty("visitType")
+    val visitType: VisitType? = null,
+
+    @JsonProperty("location")
+    val location: Location? = null,
+
+    @JsonProperty("startDatetime")
+    val startDatetime: String? = null,
+
+    @JsonProperty("stopDatetime")
+    val stopDatetime: String? = null,
+
+    @JsonProperty("auditInfo")
+    val auditInfo: AuditInfo? = null
+) {
+
+    /**
+     * Controlled final compiled output.
+     * This ensures downstream layers do not depend on nested structures.
+     */
+    fun toSimpleVisit(): SimpleVisit {
+        return SimpleVisit(
+            uuid = uuid,
+            display = display,
+            visitTypeDisplay = visitType?.display,
+            locationDisplay = location?.display,
+            startDatetime = startDatetime,
+            stopDatetime = stopDatetime,
+            auditorDisplay = auditInfo?.creator?.display
+        )
+    }
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VisitType(
+    @JsonProperty("display")
+    val display: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Location(
+    @JsonProperty("display")
+    val display: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class AuditInfo(
+    @JsonProperty("creator")
+    val creator: Creator? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Creator(
+    @JsonProperty("display")
+    val display: String? = null
+)
+
+/**
+ * Final flattened structure for UI / Domain consumption.
+ */
+data class SimpleVisit(
+    val uuid: String?,
+    val display: String?,
+    val visitTypeDisplay: String?,
+    val locationDisplay: String?,
+    val startDatetime: String?,
+    val stopDatetime: String?,
+    val auditorDisplay: String?
 )

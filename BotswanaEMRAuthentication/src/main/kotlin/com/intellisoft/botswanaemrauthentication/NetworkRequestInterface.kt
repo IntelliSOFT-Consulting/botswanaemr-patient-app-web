@@ -40,8 +40,8 @@ interface NetworkRequestInterface {
     @GET("rest/v1/visit")
     suspend fun getVisits(@Query("patient") patient: String, @Query("v") v: String):Response<DbVisitResponse>
 
-    @GET("rest/v1/visit/{visit}")
-    suspend fun getVisitById(@Path("visit") visit: String, @Query("v") v: String):Response<DbVisitRaw>
+//    @GET("rest/v1/visit/{visit}")
+//    suspend fun getVisitById(@Path("visit") visit: String, @Query("v") v: String):Response<DbVisitRaw>
 
     // New Conditions API
     @GET("fhir2/R4/Condition")
