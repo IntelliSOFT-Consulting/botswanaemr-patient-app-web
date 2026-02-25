@@ -378,69 +378,64 @@ class NetworkCall(
         var code: Int
 
         try {
-            val retrofitCall = networkRequestInterface?.getAllergy(openMrsId)
+            val retrofitCall = networkRequestInterface.getAllergy(openMrsId)
 
-            if (retrofitCall != null){
+            if (retrofitCall.isSuccessful){
 
-                if (retrofitCall.isSuccessful){
+                val resultBody = retrofitCall.body()
+                if (resultBody != null){
 
-                    val resultBody = retrofitCall.body()
-                    if (resultBody != null){
+                    val dbAllergyDataResultsList = ArrayList<DbAllergyDataResults>()
+                    val bodyResult = resultBody.results
 
-                        val dbAllergyDataResultsList = ArrayList<DbAllergyDataResults>()
-                        val bodyResult = resultBody.results
+                    if (!bodyResult.isNullOrEmpty()){
 
-                        if (bodyResult.isNotEmpty()){
+                        for (dbAllergyData in bodyResult) {
 
-                            for (dbAllergyData in bodyResult) {
+                            val display = dbAllergyData.display
 
-                                val display = dbAllergyData.display
+                            val reactionList = ArrayList<String>()
 
-                                val reactionList = ArrayList<String>()
+                            val reactionsList = dbAllergyData.reactions
+                            val comment = dbAllergyData.comment
 
-                                val reactionsList = dbAllergyData.reactions
-                                reactionsList.forEach{
+                            reactionsList?.forEach{
 
-                                    val reaction = it.reaction.display
-                                    reactionList.add(reaction)
-                                }
-                                val dbAllergyDataResults = DbAllergyDataResults(display, reactionList)
-                                dbAllergyDataResultsList.add(dbAllergyDataResults)
+                                val reaction = it.reaction?.display ?: ""
+                                reactionList.add(reaction)
                             }
-
+                            reactionList.add(comment?: "")
+                            val dbAllergyDataResults = DbAllergyDataResults(display ?: "", reactionList)
+                            dbAllergyDataResultsList.add(dbAllergyDataResults)
                         }
 
-                        val dbResultsData = DbResultsData(dbAllergyDataResultsList.size, dbAllergyDataResultsList)
-
-
-                        code = 200
-                        details = dbResultsData
-
-                    }else{
-                        code = 400
-                        details = "No allergy data found"
                     }
 
+                    val dbResultsData = DbResultsData(dbAllergyDataResultsList.size, dbAllergyDataResultsList)
+
+
+                    code = 200
+                    details = dbResultsData
 
                 }else{
-
-                    val errorCode = retrofitCall.code()
-                    println("------1 $errorCode")
-
-                    if (errorCode == 500){
-                        code = 400
-                        details = "We could not find any allergies."
-                    }else{
-                        code = 400
-                        details = "There is an issue processing the request."
-                    }
-
+                    code = 400
+                    details = "No allergy data found"
                 }
 
 
             }else{
-                code = 400
-                details = "The requested resource could not be found."
+
+                val errorCode = retrofitCall.code()
+                println("------1 $errorCode")
+
+                if (errorCode == 500){
+                    code = 400
+                    details = "We could not find any allergies."
+                }else{
+                    code = 400
+                    details = "There is an issue processing the request."
+                }
+
             }
         }catch (e: Exception){
 

@@ -217,20 +217,25 @@ data class DbDrugsResults(
     val display: String,
     val type: String?
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbAllergyResults(
-    val results: List<DbAllergyData>
+    val results: List<DbAllergyData>? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbAllergyData(
-    val display: String,
-    val uuid: String,
-    val reactions: List<DbAllergyReactions>
+    val display: String? = null,
+    val comment: String? = null,
+    val uuid: String? = null,
+    val reactions: List<DbAllergyReactions>? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbAllergyReactions(
-    val reaction: DbAllergyReactionsData
+    val reaction: DbAllergyReactionsData? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbAllergyReactionsData(
-    val uuid: String,
-    val display: String
+    val uuid: String? = null,
+    val display: String? = null
 )
 
 data class DbConditionsData(

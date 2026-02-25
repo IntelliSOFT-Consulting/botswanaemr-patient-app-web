@@ -12,15 +12,15 @@ import retrofit2.converter.jackson.JacksonConverterFactory
 
 @Configuration
 open class RetrofitConfig(
-    @Autowired private var formatterClass: FormatterClass
+    private val openMrsProperties: OpenMrsProperties
 ) {
 
     @Bean
     open fun retrofit(): Retrofit {
 
         val basicAuth = Credentials.basic(
-            formatterClass.getValue().username,
-            formatterClass.getValue().password)
+            openMrsProperties.username,
+            openMrsProperties.password)
 
         val client = OkHttpClient.Builder()
             .addInterceptor { chain ->
@@ -35,7 +35,7 @@ open class RetrofitConfig(
             .build()
 
         return Retrofit.Builder()
-            .baseUrl(formatterClass.getValue().openMrsUrl)
+            .baseUrl(openMrsProperties.url)
             .client(client)
             .addConverterFactory(JacksonConverterFactory.create())
             .build()

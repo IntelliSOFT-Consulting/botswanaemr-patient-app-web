@@ -38,3 +38,6 @@ build/
 #application.properties
 #application-dev.properties
 #application-server.properties
+
+.env.dev
+.env.server

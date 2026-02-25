@@ -518,7 +518,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
             createNotification(dbNotification);
 
             return new Results(200,
-                    new DbResults("A reset password code has been sent to your email address."));
+                    new DbResults("A reset password code has been sent to your email address within 5 minutes."));
 
         }else {
             //Email does not exist
@@ -590,7 +590,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                                 NotificationDetails.AUTHENTICATION.name());
                         createNotification(dbNotification);
 
-                        return new Results(200, "Password has been changed successfully.");
+                        return new Results(200, new DbResults("Your password has been changed successfully."));
 
 
                     }else {
@@ -832,12 +832,12 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
 
             String openMrsId = patientDetails.getOpenMrsId();
 
-//            if (openMrsId == null || openMrsId.isEmpty()) {
-//                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
-//            }
+            if (openMrsId == null || openMrsId.isEmpty()) {
+                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
+            }
 
             List<PatientCondition> patientConditionList = networkCall
-                    .getConditionsValuesDetails("2f394969-ec6d-4692-8544-4ac212d0f22e");
+                    .getConditionsValuesDetails(openMrsId);
 
             patientConditionList.forEach(patientCondition -> {
 
