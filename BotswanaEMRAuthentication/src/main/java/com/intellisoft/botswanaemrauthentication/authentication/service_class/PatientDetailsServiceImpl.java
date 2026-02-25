@@ -165,24 +165,32 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
                             DbOpenMrsPatientSearchResult searchResult = (DbOpenMrsPatientSearchResult) results.getMessage();
 
                             // Verify phone number matches
-                            String openMrsPhoneNumber = searchResult.getPhoneNumber();
+//                            String openMrsPhoneNumber = searchResult.getPhoneNumber();
                             String providedPhoneNumber = registerRequest.getPhoneNumber();
 
-                            if (openMrsPhoneNumber != null && openMrsPhoneNumber.equals(providedPhoneNumber)){
-                                // Phone matches - link patient
-                                String openMrsId = searchResult.getOpenMrsId();
-                                String openMrsUUId = searchResult.getOpenMrsUuid();
+                            //Removed the phone number verification
+                            String openMrsId = searchResult.getOpenMrsId();
+                            String openMrsUUId = searchResult.getOpenMrsUuid();
 
-                                patientDetails.setPatientIdentificationNo(openMrsId);
-                                patientDetails.setOpenMrsId(openMrsUUId);
-                                patientDetails.setPatient(true);
+                            patientDetails.setPatientIdentificationNo(openMrsId);
+                            patientDetails.setOpenMrsId(openMrsUUId);
+                            patientDetails.setPatient(true);
 
-                                notification = notification + "\n" + "Patient linked successfully. You can now access your medical records.";
-                            } else {
-                                // Phone doesn't match - proceed without linking
-                                patientDetails.setPatient(false);
-                                notification = notification + "\n" + "Patient linking was not done. The phone number does not match the one in OpenMRS.";
-                            }
+//                            if (openMrsPhoneNumber != null && openMrsPhoneNumber.equals(providedPhoneNumber)){
+//                                // Phone matches - link patient
+//                                String openMrsId = searchResult.getOpenMrsId();
+//                                String openMrsUUId = searchResult.getOpenMrsUuid();
+//
+//                                patientDetails.setPatientIdentificationNo(openMrsId);
+//                                patientDetails.setOpenMrsId(openMrsUUId);
+//                                patientDetails.setPatient(true);
+//
+//                                notification = notification + "\n" + "Patient linked successfully. You can now access your medical records.";
+//                            } else {
+//                                // Phone doesn't match - proceed without linking
+//                                patientDetails.setPatient(false);
+//                                notification = notification + "\n" + "Patient linking was not done. The phone number does not match the one in OpenMRS.";
+//                            }
                         }else {
                             // Patient not found in OpenMRS - proceed without linking
                             patientDetails.setPatient(false);

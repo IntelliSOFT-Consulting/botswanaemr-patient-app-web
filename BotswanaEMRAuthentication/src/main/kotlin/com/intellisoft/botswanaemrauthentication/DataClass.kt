@@ -433,14 +433,6 @@ data class DbEncounterType(
     val display: String?
 )
 
-data class DbVitalDataResults(
-    val conceptName: String?,
-    val value: String?,
-    val unit: String?,
-    val dateRecorded: String?,
-    val encounter: String?
-)
-
 data class VisitEncounterSummary(
     val uuid: String?,
     val display: String?,
@@ -675,4 +667,11 @@ data class PatientVitalDTO(
     val encounterType: String,
     val encounterProvider: String?,
     val location: String?
+)
+data class DbVitalDataResults(
+    val conceptName: String?,
+    val value: String?,
+    val unit: String?,
+    val dateRecorded: String?,
+    val encounter: String?
 )
