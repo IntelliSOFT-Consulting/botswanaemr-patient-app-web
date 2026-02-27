@@ -679,7 +679,7 @@ data class DbVitalDataResults(
 )
 data class DbMedicalHistoryData(
     val allergies : List<DbAllergyDataResults> = emptyList(),
-    val conditions: List<PatientCondition>     = emptyList(),
+    val conditions: List<DbConditionDataResults>     = emptyList(),
     val drugs     : List<DbDrugsResults>       = emptyList(),
     val vitals    : List<PatientVitalDTO>      = emptyList(),
     val visits    : List<VisitSummary>         = emptyList()

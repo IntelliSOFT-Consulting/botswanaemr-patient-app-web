@@ -1328,7 +1328,7 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
         log.info("Fetching conditions for userId={}", userId);
 
         String openMrsId = resolveOpenMrsId(userId);
-        List<PatientCondition> conditionList = networkCall.getConditionsValuesDetails(openMrsId);
+        List<DbConditionDataResults> conditionList = networkCall.getConditionsValuesDetails(openMrsId);
 
         Object dbResultsData = new DbResultsData(conditionList.size(), conditionList);
         return new Results(200, dbResultsData);

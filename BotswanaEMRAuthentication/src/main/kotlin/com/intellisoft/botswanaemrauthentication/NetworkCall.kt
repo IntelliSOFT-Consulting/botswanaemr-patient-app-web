@@ -253,7 +253,6 @@ class NetworkCall(
                     val resultBody = retrofitCall.body()
 
                     if (resultBody != null){
-
                         val dbConditionDataResultsList = ArrayList<DbConditionDataResults>()
 
                         resultBody.forEach {dbCondition ->
@@ -329,7 +328,7 @@ class NetworkCall(
 
     fun getConditionsValuesDetails(openMrsId: String) = runBlocking { getConditionsValues(openMrsId) }
 
-    suspend fun getConditionsValues(patientUuid: String): List<PatientCondition> {
+    suspend fun getConditionsValues(patientUuid: String): List<DbConditionDataResults> {
 
         val response = networkRequestInterface.getConditionsValues(patientUuid)
 
@@ -362,11 +361,12 @@ class NetworkCall(
                     ?.let { OffsetDateTime.parse(it) }
                     ?: OffsetDateTime.now()
 
-                PatientCondition(
-                    condition = conditionValue,
-                    clinicalStatus = statusCode,
-                    recordedBy = recorder,
-                    recordedDate = recordedDate
+                DbConditionDataResults(
+                    name = conditionValue,
+                    status = statusCode,
+                    dateCreated = recordedDate.toString(),
+                    additionalDetail = recorder
+
                 )
             }
             ?: emptyList()
