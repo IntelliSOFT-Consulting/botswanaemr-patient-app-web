@@ -502,6 +502,20 @@ class NetworkCall(
     //Get vitals
     fun getPatientVitalsDetails(openMrsId: String) = runBlocking { getPatientVitals(openMrsId) }
     suspend fun getPatientVitals(openMrsId: String): List<PatientVitalDTO> {
+        val knownVitals = listOf(
+            "temp", "temperature",
+            "bp", "blood pressure",
+            "weight",
+            "height",
+            "bmi", "body mass index",
+            "bsa", "body surface area",
+            "rr", "respiratory rate",
+            "pulse", "heart rate",
+            "head circumference",
+            "glucose", "glucose level", "blood glucose",
+            "oxygen", "oxygen level", "spo2", "oxygen saturation"
+        )
+
         return try {
             val response = networkRequestInterface.getVitals(openMrsId, "full")
 
@@ -511,12 +525,20 @@ class NetworkCall(
                 result.encounter?.obs.orEmpty().mapNotNull { obs ->
                     obs.display?.let { display ->
                         val (conceptName, value, unit) = parseConcept(display)
+
+                        val isKnownVital = knownVitals.any { known ->
+                            conceptName.trim().lowercase().contains(known)
+                        }
+
+                        if (!isKnownVital) return@mapNotNull null
+
                         PatientVitalDTO(
-                            conceptName  = conceptName,
-                            value        = value,
-                            unit         = unit,
-                            dateRecorded = formatDate(result.obsDatetime ?: result.encounter?.encounterDatetime),
+                            conceptName       = conceptName,
+                            value             = value,
+                            unit              = unit,
+                            dateRecorded      = formatDate(result.obsDatetime ?: result.encounter?.encounterDatetime),
                             encounterType     = result.encounter?.encounterType?.display.orEmpty(),
+                            encounter         = result.encounter?.encounterType?.display.orEmpty(),
                             encounterProvider = result.encounter?.encounterProviders?.firstOrNull()?.display,
                             location          = result.location?.display
                         )

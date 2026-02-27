@@ -667,6 +667,7 @@ data class PatientVitalDTO(
     val unit: String,
     val dateRecorded: String,
     val encounterType: String,
+    val encounter: String,
     val encounterProvider: String?,
     val location: String?
 )
