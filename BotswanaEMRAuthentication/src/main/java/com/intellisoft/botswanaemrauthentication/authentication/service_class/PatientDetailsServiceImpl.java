@@ -5,7 +5,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.intellisoft.botswanaemrauthentication.*;
 import com.intellisoft.botswanaemrauthentication.authentication.entity.PatientDetails;
+import com.intellisoft.botswanaemrauthentication.authentication.registration.OpenMrsCallException;
+import com.intellisoft.botswanaemrauthentication.authentication.registration.OpenMrsNotLinkedException;
+import com.intellisoft.botswanaemrauthentication.authentication.registration.PatientNotFoundException;
 import com.intellisoft.botswanaemrauthentication.authentication.repository.PatientDetailsRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.HttpClient;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLContextBuilder;
@@ -13,7 +17,6 @@ import org.apache.http.conn.ssl.TrustAllStrategy;
 import org.apache.http.impl.client.HttpClients;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jetbrains.annotations.NotNull;
-import org.keycloak.KeycloakPrincipal;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
@@ -24,7 +27,6 @@ import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.authorization.client.AuthzClient;
 import org.keycloak.authorization.client.Configuration;
-import org.keycloak.authorization.client.util.Http;
 import org.keycloak.authorization.client.util.HttpResponseException;
 import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.representations.idm.ClientRepresentation;
@@ -40,7 +42,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -58,6 +59,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.thymeleaf.TemplateEngine;
 
 @Service
+@Slf4j
 public class PatientDetailsServiceImpl implements PatientDetailsService{
 
     @Value("${app.keycloak.authServerUrl}")
@@ -98,6 +100,8 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     private FormatterClass formatterClass = new FormatterClass();
 
     private final RestTemplateConfig restTemplateConfig = new RestTemplateConfig();
+
+
 
     public PatientDetailsServiceImpl(NetworkCall networkCall) {
         this.networkCall = networkCall;
@@ -831,86 +835,6 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     }
 
     @Override
-    public Results getConditions(String userId) {
-
-        ArrayList<DbConditionDataResults> dbConditionDataResultsArrayList = new ArrayList<>();
-
-        PatientDetails patientDetails = getPatientData(userId);
-        if (patientDetails != null){
-
-            String openMrsId = patientDetails.getOpenMrsId();
-
-            if (openMrsId == null || openMrsId.isEmpty()) {
-                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
-            }
-
-            List<PatientCondition> patientConditionList = networkCall
-                    .getConditionsValuesDetails(openMrsId);
-
-            patientConditionList.forEach(patientCondition -> {
-
-                DbConditionDataResults dbConditionDataResults = new DbConditionDataResults(
-                        patientCondition.getCondition(),
-                        patientCondition.getClinicalStatus(),
-                        patientCondition.getRecordedDate().toString(),
-                        patientCondition.getRecordedBy()
-                );
-                dbConditionDataResultsArrayList.add(dbConditionDataResults);
-
-            });
-
-            DbResultsData dbResultsData = new DbResultsData(dbConditionDataResultsArrayList.size(), dbConditionDataResultsArrayList);
-            return new Results(200, dbResultsData);
-
-        }else {
-            return new Results(400, new DbResults("We could not find the user."));
-        }
-
-    }
-
-    @Override
-    public Results getAllergy(String userId) {
-        PatientDetails patientDetails = getPatientData(userId);
-        if (patientDetails != null){
-
-            String openMrsId = patientDetails.getOpenMrsId();
-            
-            if (openMrsId == null || openMrsId.isEmpty()) {
-                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
-            }
-            
-            Results conditionsResults = networkCall.getPatientAllergyDetails(openMrsId);
-
-            if (conditionsResults.getCode() == 200){
-                return new Results(200, conditionsResults.getMessage());
-            }else {
-                return new Results(400, conditionsResults.getMessage());
-            }
-
-        }else {
-            return new Results(400, new DbResults("We could not find the user."));
-        }
-    }
-
-    @Override
-    public Results getDrugs(String userId) {
-        PatientDetails patientDetails = getPatientData(userId);
-        if (patientDetails != null){
-
-            String openMrsId = patientDetails.getOpenMrsId();
-            
-            if (openMrsId == null || openMrsId.isEmpty()) {
-                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
-            }
-            
-            return networkCall.getPatientDrugDetails(openMrsId);
-
-        }else {
-            return new Results(400, new DbResults("We could not find the user."));
-        }
-    }
-
-    @Override
     public Results getDrugsDetails(String userId, String drugId) {
         PatientDetails patientDetails = getPatientData(userId);
         if (patientDetails != null){
@@ -925,40 +849,6 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
             return new Results(200, conditionsResults);
 
         }else {
-            return new Results(400, new DbResults("We could not find the user."));
-        }
-    }
-
-    @Override
-    public Results getVitals(String userId) {
-        PatientDetails patientDetails = getPatientData(userId);
-        if (patientDetails != null){
-
-            String openMrsId = patientDetails.getOpenMrsId();
-            
-            if (openMrsId == null || openMrsId.isEmpty()) {
-                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
-            }
-            
-            return networkCall.getPatientVitalsDetails(openMrsId);
-
-        }else {
-            return new Results(400, new DbResults("We could not find the user."));
-        }
-    }
-
-    @Override
-    public Results getVisits(String userId) {
-        PatientDetails patientDetails = getPatientData(userId);
-        if (patientDetails != null){
-            String openMrsId = patientDetails.getOpenMrsId();
-            
-            if (openMrsId == null || openMrsId.isEmpty()) {
-                return new Results(200, new DbResultsData(0, new java.util.ArrayList<>()));
-            }
-            
-            return networkCall.getPatientVisits(openMrsId);
-        } else {
             return new Results(400, new DbResults("We could not find the user."));
         }
     }
@@ -1028,36 +918,10 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     @Override
     public Results getMedicalHistory(String userId) {
 
-        Results conditions = getConditions(userId);
-        Results allergy = getAllergy(userId);
-        Results drugs = getDrugs(userId);
-        Results vitals = getVitals(userId);
+        String openMrsId = resolveOpenMrsId(userId);
+        DbMedicalHistoryData patientVitalList = networkCall.getMedicalHistory(openMrsId);
 
-        DbMedicalHistory dbMedicalHistory = new DbMedicalHistory();
-
-        if (conditions.getCode() == 200){
-            DbResultsData dbResultsConditionsData = (DbResultsData) conditions.getMessage();
-            List<Object> conditionsData = dbResultsConditionsData.getResults();
-            dbMedicalHistory.setCondition(conditionsData);
-        }
-        if (allergy.getCode() == 200){
-            DbResultsData dbResultsAllergyData = (DbResultsData) allergy.getMessage();
-            List<Object> allergyData = dbResultsAllergyData.getResults();
-            dbMedicalHistory.setAllergy(allergyData);
-        }
-        if (drugs.getCode() == 200){
-            DbResultsData dbResultsDrugsData = (DbResultsData) drugs.getMessage();
-            List<Object> drugsData = dbResultsDrugsData.getResults();
-            dbMedicalHistory.setDrug(drugsData);
-        }
-        if (vitals.getCode() == 200){
-            DbResultsData dbResultsVitalsData = (DbResultsData) vitals.getMessage();
-            List<Object> vitalsData = dbResultsVitalsData.getResults();
-            dbMedicalHistory.setVitals(vitalsData);
-        }
-
-
-        return new Results(200, dbMedicalHistory);
+        return new Results(200, patientVitalList);
 
     }
 
@@ -1455,6 +1319,93 @@ public class PatientDetailsServiceImpl implements PatientDetailsService{
     private Boolean checkEmailAddress(String emailAddress) {
 
         return patientDetailsRepository.existsByEmailAddress(emailAddress);
+    }
+
+    // ── Interface implementation ──────────────────────────────────────────────
+
+    @Override
+    public Results getConditions(String userId) {
+        log.info("Fetching conditions for userId={}", userId);
+
+        String openMrsId = resolveOpenMrsId(userId);
+        List<PatientCondition> conditionList = networkCall.getConditionsValuesDetails(openMrsId);
+
+        Object dbResultsData = new DbResultsData(conditionList.size(), conditionList);
+        return new Results(200, dbResultsData);
+    }
+
+    @Override
+    public Results getAllergy(String userId) {
+        log.info("Fetching allergies for userId={}", userId);
+
+        String openMrsId = resolveOpenMrsId(userId);
+        List<DbAllergyDataResults> allergies = networkCall.getPatientAllergyDetails(openMrsId);
+
+        Object dbResultsData = new DbResultsData(allergies.size(), allergies);
+        return new Results(200, dbResultsData);
+    }
+
+    @Override
+    public Results getDrugs(String userId) {
+        log.info("Fetching drug orders for userId={}", userId);
+
+        String openMrsId = resolveOpenMrsId(userId);
+        List<DbDrugsResults> drugList = networkCall.getPatientDrugDetails(openMrsId);
+
+        Object dbResultsData = new DbResultsData(drugList.size(), drugList);
+        return new Results(200, dbResultsData);
+    }
+
+    @Override
+    public Results getVitals(String userId) {
+        log.info("Fetching vitals for userId={}", userId);
+
+        String openMrsId = resolveOpenMrsId(userId);
+        List<PatientVitalDTO> patientVitalList = networkCall.getPatientVitalsDetails(openMrsId);
+
+        Object dbResultsData = new DbResultsData(patientVitalList.size(), patientVitalList);
+        return new Results(200, dbResultsData);
+    }
+
+    @Override
+    public Results getVisits(String userId) {
+        log.info("Fetching visits for userId={}", userId);
+
+        String openMrsId = resolveOpenMrsId(userId);
+        List<VisitSummary> patientVisits = networkCall.getPatientVisits(openMrsId);
+
+        return new Results(200, patientVisits);
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Loads the local patient record, throwing {@link PatientNotFoundException} if absent.
+     */
+    private PatientDetails resolvePatient(String userId) {
+        return patientDetailsRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("Patient not found for userId={}", userId);
+                    return new PatientNotFoundException(userId);
+                });
+    }
+
+    /**
+     * Resolves the patient's OpenMRS UUID.
+     * Throws {@link OpenMrsNotLinkedException} if the account has no OpenMRS link yet,
+     * which the {@code GlobalExceptionHandler} maps to a 200 with an empty dataset —
+     * because this is a normal state for newly registered patients, not a server error.
+     */
+    private String resolveOpenMrsId(String userId) {
+        PatientDetails patient = resolvePatient(userId);
+        String openMrsId = patient.getOpenMrsId();
+
+        if (openMrsId == null || openMrsId.isBlank()) {
+            log.info("No OpenMRS link for userId={} – account pending linking", userId);
+            throw new OpenMrsNotLinkedException(userId);
+        }
+
+        return openMrsId;
     }
 
 

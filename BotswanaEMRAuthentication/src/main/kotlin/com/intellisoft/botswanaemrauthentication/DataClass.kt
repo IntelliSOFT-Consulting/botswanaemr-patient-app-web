@@ -209,13 +209,15 @@ data class Encounter(
 data class CareSetting(
     val display: String
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbDrugs(
-    val results : List<DbDrugsResults>
+    val results : List<DbDrugsResults>? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbDrugsResults(
-    val uuid: String,
-    val display: String,
-    val type: String?
+    val uuid: String? = null,
+    val display: String? = null,
+    val type: String? = null
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class DbAllergyResults(
@@ -674,4 +676,11 @@ data class DbVitalDataResults(
     val unit: String?,
     val dateRecorded: String?,
     val encounter: String?
+)
+data class DbMedicalHistoryData(
+    val allergies : List<DbAllergyDataResults> = emptyList(),
+    val conditions: List<PatientCondition>     = emptyList(),
+    val drugs     : List<DbDrugsResults>       = emptyList(),
+    val vitals    : List<PatientVitalDTO>      = emptyList(),
+    val visits    : List<VisitSummary>         = emptyList()
 )

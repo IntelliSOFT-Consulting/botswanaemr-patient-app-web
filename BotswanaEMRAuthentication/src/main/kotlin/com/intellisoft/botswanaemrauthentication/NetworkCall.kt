@@ -6,7 +6,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
+import retrofit2.HttpException
 import retrofit2.Retrofit
+import java.io.IOException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -372,146 +374,72 @@ class NetworkCall(
 
     //Get allergy
     fun getPatientAllergyDetails(openMrsId: String) = runBlocking { getPatientAllergy(openMrsId) }
-    private suspend fun getPatientAllergy(openMrsId: String): Results{
-
-        var details: Any
-        var code: Int
-
-        try {
+    private suspend fun getPatientAllergy(openMrsId: String): List<DbAllergyDataResults> {
+        return try {
             val retrofitCall = networkRequestInterface.getAllergy(openMrsId)
 
-            if (retrofitCall.isSuccessful){
+            if (retrofitCall.isSuccessful) {
+                val bodyResult = retrofitCall.body()?.results
 
-                val resultBody = retrofitCall.body()
-                if (resultBody != null){
+                if (!bodyResult.isNullOrEmpty()) {
+                    bodyResult.map { dbAllergyData ->
+                        val reactions = dbAllergyData.reactions
+                            ?.mapNotNull { it.reaction?.display }
+                            ?.toMutableList()
+                            ?: mutableListOf()
 
-                    val dbAllergyDataResultsList = ArrayList<DbAllergyDataResults>()
-                    val bodyResult = resultBody.results
+                        dbAllergyData.comment?.let { reactions.add(it) }
 
-                    if (!bodyResult.isNullOrEmpty()){
-
-                        for (dbAllergyData in bodyResult) {
-
-                            val display = dbAllergyData.display
-                            val severity = dbAllergyData.severity ?: ""
-
-                            val reactionList = ArrayList<String>()
-
-                            val reactionsList = dbAllergyData.reactions
-                            val comment = dbAllergyData.comment
-
-                            reactionsList?.forEach{
-
-                                val reaction = it.reaction?.display ?: ""
-                                reactionList.add(reaction)
-                            }
-                            reactionList.add(comment?: "")
-                            val dbAllergyDataResults = DbAllergyDataResults(display ?: "", reactionList, severity, "")
-                            dbAllergyDataResultsList.add(dbAllergyDataResults)
-                            // Remove duplicate reactions
-                            dbAllergyDataResultsList.distinct()
-                        }
-
-                    }
-
-                    val dbResultsData = DbResultsData(dbAllergyDataResultsList.size, dbAllergyDataResultsList)
-
-
-                    code = 200
-                    details = dbResultsData
-
-                }else{
-                    code = 400
-                    details = "No allergy data found"
+                        DbAllergyDataResults(
+                            name   = dbAllergyData.display.orEmpty(),
+                            reactions = reactions,
+                            severity  = dbAllergyData.severity.orEmpty(),
+                            dateIdentified     = ""
+                        )
+                    }.distinctBy { it.name }
+                } else {
+                    emptyList()
                 }
 
-
-            }else{
-
-                val errorCode = retrofitCall.code()
-                println("------1 $errorCode")
-
-                if (errorCode == 500){
-                    code = 400
-                    details = "We could not find any allergies."
-                }else{
-                    code = 400
-                    details = "There is an issue processing the request."
-                }
-
+            } else {
+                emptyList()
             }
-        }catch (e: Exception){
 
-            e.printStackTrace()
-
-            code = 400
-            details = "We could not process your request at the moment. Please try again after sometime."
-
+        } catch (e: IOException) {
+            emptyList()
+        } catch (e: HttpException) {
+            emptyList()
+        } catch (e: Exception) {
+            emptyList()
         }
-
-        return Results(code, details)
-
     }
 
     //Get drug
     fun getPatientDrugDetails(openMrsId: String) = runBlocking { getPatientDrugs(openMrsId) }
-    private suspend fun getPatientDrugs(openMrsId: String): Results{
+    private suspend fun getPatientDrugs(openMrsId: String): List<DbDrugsResults> {
 
-        var details: Any
-        var code: Int
+        val drugList = mutableListOf<DbDrugsResults>()
 
         try {
-            val retrofitCall = networkRequestInterface?.getDrugs(openMrsId)
-            if (retrofitCall != null){
+            val retrofitCall = networkRequestInterface.getDrugs(openMrsId)
 
-                if (retrofitCall.isSuccessful){
+            if (retrofitCall.isSuccessful) {
+                val results = retrofitCall.body()?.results ?: emptyList()
+                results.forEach {
+                    val uuid = it.uuid
+                    val display = it.display
+                    val type = it.type
 
-                    code = 200
-                    val resultBody = retrofitCall.body()
-                    if (resultBody != null){
-
-                        val bodyResult = resultBody.results
-
-                        val dbResultsData =  DbResultsData(bodyResult.size, bodyResult)
-
-                        code = 200
-                        details = dbResultsData
-
-                    }else{
-                        code = 400
-                        details = "No allergy data found"
-                    }
-
-
-                }else{
-
-                    val errorCode = retrofitCall.code()
-                    if (errorCode == 500){
-                        code = 404
-                        details = "There was an issue connecting. Please try again after sometime."
-                    }else{
-                        code = 400
-                        details = "There is an issue processing the request."
-                    }
-
+                    val drugDetails = DbDrugsResults(uuid, display, type)
+                    drugList.add(drugDetails)
                 }
-                println("------ $code")
 
-            }else{
-                code = 400
-                details = "The requested resource could not be found."
             }
-        }catch (e: Exception){
 
+        } catch (e: Exception) {
             e.printStackTrace()
-
-            code = 400
-            details = "We could not process your request at the moment. Please try again after sometime."
-
         }
-
-        return Results(code, details)
-
+        return drugList
     }
 
     //Get drug details
@@ -573,36 +501,35 @@ class NetworkCall(
 
     //Get vitals
     fun getPatientVitalsDetails(openMrsId: String) = runBlocking { getPatientVitals(openMrsId) }
-    suspend fun getPatientVitals(openMrsId: String): Results {
+    suspend fun getPatientVitals(openMrsId: String): List<PatientVitalDTO> {
         return try {
             val response = networkRequestInterface.getVitals(openMrsId, "full")
 
-            if (!response.isSuccessful) {
-                val msg = if (response.code() == 500) "We could not find any vitals." else "There is an issue processing the request."
-                Results(400, msg)
-            } else {
-                val body = response.body()
-                if (body == null || body.results.isEmpty()) {
-                    Results(400, "No vitals data found")
-                } else {
-                    val vitalDTOs = body.results.flatMap { result ->
-                        result.encounter?.obs.orEmpty().mapNotNull { obs ->
-                            obs.display?.let { display ->
-                                val (conceptName, value, unit) = parseConcept(display)
-                                val dateRecorded = formatDate(result.obsDatetime ?: result.encounter?.encounterDatetime)
-                                val encounterType = result.encounter?.encounterType?.display ?: ""
-                                val encounterProvider = result.encounter?.encounterProviders?.firstOrNull()?.display
-                                val location = result.location?.display
-                                PatientVitalDTO(conceptName, value, unit, dateRecorded, encounterType, encounterProvider, location)
-                            }
-                        }
+            if (!response.isSuccessful || response.body()?.results.isNullOrEmpty()) return emptyList()
+
+            response.body()!!.results.flatMap { result ->
+                result.encounter?.obs.orEmpty().mapNotNull { obs ->
+                    obs.display?.let { display ->
+                        val (conceptName, value, unit) = parseConcept(display)
+                        PatientVitalDTO(
+                            conceptName  = conceptName,
+                            value        = value,
+                            unit         = unit,
+                            dateRecorded = formatDate(result.obsDatetime ?: result.encounter?.encounterDatetime),
+                            encounterType     = result.encounter?.encounterType?.display.orEmpty(),
+                            encounterProvider = result.encounter?.encounterProviders?.firstOrNull()?.display,
+                            location          = result.location?.display
+                        )
                     }
-                    Results(200, vitalDTOs)
                 }
             }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            Results(400, "We could not process your request at the moment. Please try again after sometime.")
+
+        } catch (e: IOException) {
+            emptyList()
+        } catch (e: HttpException) {
+            emptyList()
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
@@ -633,51 +560,41 @@ class NetworkCall(
 
 
     fun getPatientVisits(openMrsId: String) = runBlocking { fetchPatientVisitsBac(openMrsId) }
-    private suspend fun fetchPatientVisitsBac(openMrsId: String): Results {
-        var details: Any
-        var code: Int
-
-        try {
+    private suspend fun fetchPatientVisitsBac(openMrsId: String): List<VisitSummary> {
+        return try {
             val retrofitCall = networkRequestInterface.getVisits(openMrsId, "full")
 
-            if (retrofitCall.isSuccessful) {
-                val resultBody = retrofitCall.body()
+            if (!retrofitCall.isSuccessful || retrofitCall.body()?.results.isNullOrEmpty()) return emptyList()
 
-                if (resultBody != null) {
-                    val visitsRaw = resultBody.results
-                    val visitSummaries = visitsRaw?.map { mapVisitSummary(it) }
-                    if (visitSummaries != null) {
+            retrofitCall.body()!!.results?.map { mapVisitSummary(it) } ?: emptyList()
 
-                        val dbResultsData = DbResultsData(visitSummaries.size, visitSummaries)
-                        code = 200
-                        details = dbResultsData
-
-                    }else {
-                        code = 400
-                        details = "No visits found"
-                    }
-                } else {
-                    code = 400
-                    details = "No visits found"
-                }
-            } else {
-                val errorCode = retrofitCall.code()
-                code = if (errorCode == 500) {
-                    404
-                } else {
-                    400
-                }
-                details = "There is an issue processing the request."
-            }
+        } catch (e: IOException) {
+            emptyList()
+        } catch (e: HttpException) {
+            emptyList()
         } catch (e: Exception) {
-            e.printStackTrace()
-            code = 400
-            details = "We could not process your request at the moment. Please try again after sometime."
+            emptyList()
         }
-
-        return Results(code, details)
     }
 
+    fun getMedicalHistory(openMrsId: String) = runBlocking { getMedicalHistoryBac(openMrsId) }
+    suspend fun getMedicalHistoryBac(userId: String): DbMedicalHistoryData {
+        return coroutineScope {
+            val allergies  = async { getPatientAllergyDetails(userId) }
+            val conditions = async { getConditionsValuesDetails(userId) }
+            val drugs      = async { getPatientDrugDetails(userId) }
+            val vitals     = async { getPatientVitalsDetails(userId) }
+            val visits     = async { getPatientVisits(userId) }
+
+            DbMedicalHistoryData(
+                allergies  = allergies.await(),
+                conditions = conditions.await(),
+                drugs      = drugs.await(),
+                vitals     = vitals.await(),
+                visits     = visits.await()
+            )
+        }
+    }
 //    fun getVisitById(visitId: String) = runBlocking { fetchVisitById(visitId) }
 //    private suspend fun fetchVisitById(visitId: String): Results {
 //        var details: Any
