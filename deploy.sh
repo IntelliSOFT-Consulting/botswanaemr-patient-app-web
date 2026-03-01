@@ -196,7 +196,7 @@ docker compose -f "$COMPOSE_FILE" ps "${SELECTED_SERVICES[@]}"
 echo ""
 read -rp "Push built images to Docker Hub? [y/N]: " PUSH_CHOICE
 
-if [[ "${PUSH_CHOICE,,}" == "y" ]]; then
+if [[ "$PUSH_CHOICE" == "y" || "$PUSH_CHOICE" == "Y" ]]; then
   echo -e "\n${CYAN}========================================${NC}"
   echo -e "${CYAN}  Pushing images to Docker Hub...      ${NC}"
   echo -e "${CYAN}========================================${NC}"
