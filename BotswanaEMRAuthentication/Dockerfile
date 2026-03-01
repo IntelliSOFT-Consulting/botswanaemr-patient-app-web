@@ -12,7 +12,7 @@ RUN mvn clean package -DskipTests
 
 # Stage 2: Production image
 FROM amazoncorretto:11
-WORKDIR /app
+WORKDIR /botswana_emr_authentication_java_backend
 
 # Expose port
 EXPOSE 8081
