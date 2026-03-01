@@ -42,8 +42,8 @@ echo -e "${CYAN}========================================${NC}"
 echo -e "${CYAN}  Pulling latest from main branch...${NC}"
 echo -e "${CYAN}========================================${NC}"
 cd "$REPO_ROOT"
-git checkout user-auth-fix
-git pull origin user-auth-fix
+git checkout main 
+git pull origin main
 echo -e "${GREEN}✔ Repository up to date.${NC}\n"
 
 # ============================================================
