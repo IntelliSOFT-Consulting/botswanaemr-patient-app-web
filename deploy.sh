@@ -82,7 +82,7 @@ fi
 
 # ============================================================
 # STEP 3: Merge .env files
-#   Combines .env.general + module-specific .env into one
+#   Combines env.general + module-specific .env into one
 #   temporary .env that docker-compose picks up.
 # ============================================================
 echo -e "\n${CYAN}Merging environment files...${NC}"

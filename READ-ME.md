@@ -4,8 +4,9 @@ See [README-BACKEND.md](README-BACKEND.md) for Keycloak, SSL, and deployment.
 
 ## Overview
 
-1. Copy `.env.example` to `.env`: `cp .env.example .env`
-2. Fill in values in `.env` (do not commit; it is gitignored).
+1. Copy the env from env_samples
+2. Fill in values in `.env` (do not commit; it is gitignore).
+3. Make sure to save them at the project root level
 
 ## Prerequisites
 
