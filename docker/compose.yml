@@ -1,3 +1,5 @@
+version: "3.8"
+
 networks:
   emr_network:
 
@@ -27,85 +29,79 @@ services:
 
   authservice:
     container_name: authservice
-    # image: intellisoftdev/botswana_emr_auth_image:v3
     build:
-      context: ../BotswanaEMRAuthentication
+      context: ./BotswanaEMRAuthentication
       dockerfile: Dockerfile
     restart: always
     ports:
       - "8081:8081"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   fileservice:
     container_name: fileservice
-    # image: dnjau/botswana_emr_file_storage_image:v2
     build:
-      context: ../BotswanaEMRFileStorage
+      context: ./BotswanaEMRFileStorage
       dockerfile: Dockerfile
     restart: always
     ports:
       - "7003:7003"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   ambulanceservice:
     container_name: ambulanceservice
-    # image: dnjau/botswana_emr_ambulance_image:v2
     build:
-      context: ../BotswanaEMRAmbulance
+      context: ./BotswanaEMRAmbulance
       dockerfile: Dockerfile
     restart: always
     ports:
       - "7002:7002"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   facilityservice:
     container_name: facilityservice
-    # image: dnjau/botswana_emr_facility_image:1
     build:
-      context: ../BotswanaEMRFacility
+      context: ./BotswanaEMRFacility
       dockerfile: Dockerfile
     restart: always
     ports:
       - "7000:7000"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   appointmentservice:
     container_name: appointmentservice
-    # image: dnjau/botswana_emr_appointments_image:v2
     build:
-      context: ../BotswanaEMRAppointments
+      context: ./BotswanaEMRAppointments
       dockerfile: Dockerfile
     restart: always
     ports:
       - "8082:8082"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   notificationservice:
     container_name: notificationservice
-    # image: dnjau/botswana_emr_notifications_image:v1
     build:
-      context: ../BotswanaEMRNotifications
+      context: ./BotswanaEMRNotifications
       dockerfile: Dockerfile
     restart: always
     ports:
       - "7001:7001"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 

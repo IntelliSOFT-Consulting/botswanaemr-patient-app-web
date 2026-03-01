@@ -55,6 +55,9 @@ Thumbs.db
 # environment variables
 .env
 *.env
-!.env.example
+!.env.general
+
+.env.general
+.env.BotswanaEMRAuthentication
 
 certs
