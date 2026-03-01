@@ -32,6 +32,7 @@ services:
 
   authservice:
     container_name: authservice
+    image: intellisoftdev/botswana_emr_auth_image:latest
     build:
       context: ./BotswanaEMRAuthentication
       dockerfile: Dockerfile
@@ -45,6 +46,7 @@ services:
 
   fileservice:
     container_name: fileservice
+    image: intellisoftdev/botswana_emr_file_storage_image:latest
     build:
       context: ./BotswanaEMRFileStorage
       dockerfile: Dockerfile
@@ -58,6 +60,7 @@ services:
 
   ambulanceservice:
     container_name: ambulanceservice
+    image: intellisoftdev/botswana_emr_ambulance_image:latest
     build:
       context: ./BotswanaEMRAmbulance
       dockerfile: Dockerfile
@@ -71,6 +74,7 @@ services:
 
   facilityservice:
     container_name: facilityservice
+    image: intellisoftdev/botswana_emr_facility_image:latest
     build:
       context: ./BotswanaEMRFacility
       dockerfile: Dockerfile
@@ -84,6 +88,7 @@ services:
 
   appointmentservice:
     container_name: appointmentservice
+    image: intellisoftdev/botswana_emr_appointments_image:latest
     build:
       context: ./BotswanaEMRAppointments
       dockerfile: Dockerfile
@@ -97,6 +102,7 @@ services:
 
   notificationservice:
     container_name: notificationservice
+    image: intellisoftdev/botswana_emr_notifications_image:latest
     build:
       context: ./BotswanaEMRNotifications
       dockerfile: Dockerfile
