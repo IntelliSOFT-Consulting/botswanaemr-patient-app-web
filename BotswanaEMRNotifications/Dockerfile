@@ -18,7 +18,7 @@ WORKDIR /botswana_emr_notification_java_backend
 EXPOSE 7001
 
 # Copy built JAR from build stage
-COPY --from=build /app/target/BotswanaEMRNotifications-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/BotswanaEMRNotifications.jar app.jar
 
 # Run the JAR
 ENTRYPOINT ["java","-jar","app.jar"]

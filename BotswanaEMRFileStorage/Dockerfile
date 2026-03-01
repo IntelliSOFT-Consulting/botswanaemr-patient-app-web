@@ -18,7 +18,7 @@ WORKDIR /botswana_emr_file_storage_java_backend
 EXPOSE 7003
 
 # Copy built JAR from build stage
-COPY --from=build /app/target/BotswanaEMRFileStorage-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/FileStorage.jar app.jar
 
 # Run the JAR
 ENTRYPOINT ["java","-jar","app.jar"]

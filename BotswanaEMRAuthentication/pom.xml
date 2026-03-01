@@ -286,7 +286,7 @@
                 </executions>
             </plugin>
         </plugins>
-        <finalName>BotswanaEMRAuthentication-0.0.1-SNAPSHOT</finalName>
+        <finalName>BotswanaEMRAuthentication</finalName>
     </build>
 
 

@@ -18,7 +18,7 @@ WORKDIR /botswana_emr_facility_java_backend
 EXPOSE 7000
 
 # Copy built JAR from build stage
-COPY --from=build /app/target/BotswanaEMRFacility-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/BotswanaEMRFacility.jar app.jar
 
 # Run the JAR
 ENTRYPOINT ["java","-jar","app.jar"]

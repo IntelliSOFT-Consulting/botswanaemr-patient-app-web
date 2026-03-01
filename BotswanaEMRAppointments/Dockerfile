@@ -18,7 +18,7 @@ WORKDIR /botswana_emr_appointments_java_backend
 EXPOSE 8082
 
 # Copy built JAR from build stage
-COPY --from=build /app/target/BotswanaEMRAppointments-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/BotswanaEMRAppointments app.jar
 
 # Run the JAR
 ENTRYPOINT ["java","-jar","app.jar"]

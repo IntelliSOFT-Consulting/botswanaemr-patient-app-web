@@ -18,7 +18,7 @@ WORKDIR /botswana_emr_ambulance_java_backend
 EXPOSE 7002
 
 # Copy built JAR from build stage
-COPY --from=build /app/target/BotswanaEMRAmbulance-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/BotswanaEMRAmbulance.jar app.jar
 
 # Run the JAR
 ENTRYPOINT ["java","-jar","app.jar"]
