@@ -190,5 +190,30 @@ echo -e "${GREEN}  ✔ Done! Running containers:${NC}"
 echo -e "${GREEN}========================================${NC}"
 docker compose -f "$COMPOSE_FILE" ps "${SELECTED_SERVICES[@]}"
 
+# ============================================================
+# STEP 5: Optionally push images to Docker Hub
+# ============================================================
+echo ""
+read -rp "Push built images to Docker Hub? [y/N]: " PUSH_CHOICE
+
+if [[ "${PUSH_CHOICE,,}" == "y" ]]; then
+  echo -e "\n${CYAN}========================================${NC}"
+  echo -e "${CYAN}  Pushing images to Docker Hub...      ${NC}"
+  echo -e "${CYAN}========================================${NC}"
+
+  # Check docker login
+  if ! docker info 2>/dev/null | grep -q "Username"; then
+    echo -e "${YELLOW}⚠ Not logged in to Docker Hub. Running docker login...${NC}"
+    docker login || { echo -e "${RED}✘ Docker login failed. Aborting push.${NC}"; exit 1; }
+  fi
+
+  docker compose -f "$COMPOSE_FILE" $ENV_FILE_FLAG push "${SELECTED_SERVICES[@]}"
+
+  echo ""
+  echo -e "${GREEN}✔ Images pushed successfully.${NC}"
+else
+  echo -e "${YELLOW}Skipping push.${NC}"
+fi
+
 # Cleanup merged env (optional — comment out if you want to inspect it)
  rm -f "$MERGED_ENV"
