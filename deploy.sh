@@ -36,15 +36,53 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # ============================================================
-# STEP 1: Pull from main branch
+# STEP 1: Pull latest from git
 # ============================================================
 echo -e "${CYAN}========================================${NC}"
-echo -e "${CYAN}  Pulling latest from main branch...${NC}"
+echo -e "${CYAN}  Git pull                             ${NC}"
 echo -e "${CYAN}========================================${NC}"
 cd "$REPO_ROOT"
-git checkout main 
-git pull origin main
-echo -e "${GREEN}✔ Repository up to date.${NC}\n"
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+echo -e "Current branch: ${YELLOW}${CURRENT_BRANCH}${NC}"
+echo ""
+echo -e "  1) Pull from current branch ${YELLOW}(${CURRENT_BRANCH})${NC}"
+echo -e "  2) Switch to ${YELLOW}main${NC} and pull"
+echo ""
+read -rp "Choose [1/2] (default: 1): " BRANCH_CHOICE
+
+case "${BRANCH_CHOICE:-1}" in
+  2)
+    TARGET_BRANCH="main"
+    echo -e "Switching to ${YELLOW}main${NC}..."
+    if ! git checkout main; then
+      echo -e "${RED}✘ Failed to checkout main. Aborting.${NC}"
+      exit 1
+    fi
+    ;;
+  *)
+    TARGET_BRANCH="$CURRENT_BRANCH"
+    ;;
+esac
+
+# Attempt pull; if object errors occur, do a fetch + reset instead
+echo -e "Pulling latest from origin/${TARGET_BRANCH}..."
+if ! git pull origin "$TARGET_BRANCH" 2>&1; then
+  echo -e "${YELLOW}⚠ Standard pull failed (possibly corrupted objects). Attempting fetch + reset...${NC}"
+  git fetch --all
+  if git reset --hard "origin/${TARGET_BRANCH}"; then
+    echo -e "${GREEN}✔ Reset to origin/${TARGET_BRANCH} succeeded.${NC}"
+  else
+    echo -e "${RED}✘ Could not sync with origin/${TARGET_BRANCH}. Check your git remote and try:${NC}"
+    echo -e "    git remote prune origin"
+    echo -e "    git fetch --all"
+    echo -e "    git reset --hard origin/${TARGET_BRANCH}"
+    exit 1
+  fi
+fi
+
+echo -e "${GREEN}✔ Repository up to date on branch: ${TARGET_BRANCH}${NC}\n"
+
 
 # ============================================================
 # STEP 2: Ask which module(s) to build
