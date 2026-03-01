@@ -3,6 +3,9 @@ version: "3.8"
 networks:
   emr_network:
 
+#volumes:
+#  postgres_data:
+
 services:
   nginx:
     container_name: nginx
@@ -123,3 +126,19 @@ services:
     command: ["start-dev"]
     networks:
       - emr_network
+
+#  postgres:
+#    image: postgres:15
+#    container_name: postgres
+#    restart: always
+#    environment:
+#      POSTGRES_USER:
+#      POSTGRES_PASSWORD:
+#      POSTGRES_DB: postgres
+#      POSTGRES_MAX_CONNECTIONS: 200
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#    networks:
+#      - emr_network

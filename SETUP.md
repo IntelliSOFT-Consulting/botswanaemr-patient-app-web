@@ -6,30 +6,112 @@ See [README-BACKEND.md](README-BACKEND.md) for Keycloak, SSL, and deployment.
 
 1. Copy `.env.example` to `.env`: `cp .env.example .env`
 2. Fill in values in `.env` (do not commit; it is gitignored).
-3. Run via Docker Compose or Maven. Spring Boot maps `UPPER_SNAKE` env vars to `lowercase.dots` properties.
 
 ## Prerequisites
 
 JDK 11+, Maven 3, PostgreSQL, Docker, Keycloak (see README-BACKEND.md).
 
-## Profiles
+---
 
-- **dev**: Local DB and service URLs (localhost or 0.0.0.0).
-- **server**: Deployed or Docker; remote DB and internal hostnames (e.g. authservice:8081).
-- **prod**: FileStorage only; production DB and upload paths.
+## Deployment Script (`deploy.sh`)
 
-Set `SPRING_PROFILES_ACTIVE=dev` or `server` or `prod` in `.env`.
+A `deploy.sh` script is provided at the repository root to streamline pulling the latest code and starting services via Docker Compose. It handles branch selection, git sync, env file merging, and selective service builds in one step.
 
-## Docker
+### Repository Structure
 
-From repo root, with `.env` present:
-
-```bash
-cd docker
-docker compose --env-file ../.env up -d
+```
+repo-root/
+├── deploy.sh                          # ← Deployment script
+├── docker-compose.yml                 # ← Root-level compose file
+├── .env.general                       # ← Shared env vars (all services)
+├── .env.BotswanaEMRAuthentication     # ← Auth service env vars
+├── .env.BotswanaEMRFileStorage        # ← FileStorage service env vars
+├── .env.BotswanaEMRAmbulance          # ← Ambulance service env vars
+├── .env.BotswanaEMRFacility           # ← Facility service env vars
+├── .env.BotswanaEMRAppointments       # ← Appointments service env vars
+├── .env.BotswanaEMRNotifications      # ← Notifications service env vars
+├── BotswanaEMRAuthentication/
+│   └── Dockerfile
+├── BotswanaEMRFileStorage/
+│   └── Dockerfile
+└── ...
 ```
 
+Each module keeps its own `Dockerfile` inside its folder. The root `docker-compose.yml` references each one via `context: ./ModuleName`.
+
+### First-Time Setup
+
+Make the script executable:
+
+```bash
+chmod +x deploy.sh
+```
+
+### Running the Script
+
+```bash
+sudo ./deploy.sh
+```
+
+The script will guide you through three steps interactively.
+
+#### Step 1 — Branch Selection and Pull
+
+The script detects the current branch and checkouts to the main branch and pulls the latest changes.
+
+#### Step 2 — Module Selection
+
+```
+Which module(s) would you like to build and run?
+
+  0) ALL modules
+  1) BotswanaEMRAuthentication
+  2) BotswanaEMRFileStorage
+  3) BotswanaEMRAmbulance
+  4) BotswanaEMRFacility
+  5) BotswanaEMRAppointments
+  6) BotswanaEMRNotifications
+
+Enter your choice (e.g. 1  or  1 3 5  or  0 for all):
+```
+
+Enter `0` to build and start all services, or a space-separated list of numbers to target specific ones (e.g. `1 3` builds only Auth and Ambulance).
+
+#### Step 3 — Environment Merge and Build
+
+The script merges environment files in this order:
+
+1. `.env.general` — always loaded first (shared variables for all services)
+2. `.env.<ModuleName>` — loaded for each selected module
+
+The merged result is written to `.env.merged` at the repo root, which the `docker-compose.yml` reads via `env_file: .env.merged`. 
+This means module-specific values override general ones if there are duplicates.
+
+Docker Compose then builds and starts only the selected services:
+
+```bash
+docker compose -f docker-compose.yml --env-file .env.merged up -d --build <services>
+```
+
+### Environment Files
+
+| File | Purpose |
+|------|---------|
+| `.env.general` | Shared config: OpenMRS, Keycloak, Mail, internal service URLs |
+| `.env.BotswanaEMRAuthentication` | Auth-specific: DB URL, port, app name, JPA settings |
+| `.env.BotswanaEMRFileStorage` | FileStorage-specific: DB URL, upload dir, port, multipart settings |
+| `.env.BotswanaEMRAmbulance` | Ambulance-specific: DB URL, port |
+| `.env.BotswanaEMRFacility` | Facility-specific: DB URL, port |
+| `.env.BotswanaEMRAppointments` | Appointments-specific: DB URL, port, OpenMRS endpoints |
+| `.env.BotswanaEMRNotifications` | Notifications-specific: DB URL, port |
+
+> **Note:** None of the `.env.*` files should be committed to version control. They are gitignored.
+
+---
+
 Each backend service loads the root `.env` via `env_file`.
+
+---
 
 ## Environment Variables Reference
 
@@ -70,7 +152,7 @@ All variables in `.env.example` are documented below. **Required** = service wil
 ### FileStorage
 
 - **FILE_UPLOAD_DIR**: Upload directory. Used by: FileStorage. Required.
-- **FILE_STORAGE_SERVER_PORT**, **SPRING_SERVLET_MULTIPART_*: Port and multipart settings (e.g. MAX_FILE_SIZE, MAX_REQUEST_SIZE). Optional.
+- **FILE_STORAGE_SERVER_PORT**, **SPRING_SERVLET_MULTIPART_***: Port and multipart settings (e.g. MAX_FILE_SIZE, MAX_REQUEST_SIZE). Optional.
 
 ### Appointments (OAuth2 / codec)
 

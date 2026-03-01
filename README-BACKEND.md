@@ -84,7 +84,6 @@ server.ssl.keyStoreType=PKCS12
 
 ## Microservice Name
 ```shell
-    Zuul Gateway: zuul-gateway
     Ambulance Service: http://botswanaambulance:7002
     Appointment Service: http://botswanaappointments:8082
     Authentication Service: http://botswanaauth:8081
@@ -92,11 +91,6 @@ server.ssl.keyStoreType=PKCS12
     FileStorage Service: file-storage-service
     Notifications Service: http://botswananotification:7001
 ```
-
-
-
-
-
 
 ## Copyright
 

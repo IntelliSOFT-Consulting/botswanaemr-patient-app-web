@@ -35,9 +35,4 @@ build/
 .vscode/
 
 # Ignore Spring Boot configuration files
-#application.properties
-#application-dev.properties
-#application-server.properties
 
-.env.dev
-.env.server

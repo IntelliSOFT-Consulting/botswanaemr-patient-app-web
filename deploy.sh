@@ -153,4 +153,4 @@ echo -e "${GREEN}========================================${NC}"
 docker compose -f "$COMPOSE_FILE" ps "${SELECTED_SERVICES[@]}"
 
 # Cleanup merged env (optional — comment out if you want to inspect it)
-# rm -f "$MERGED_ENV"
+ rm -f "$MERGED_ENV"
