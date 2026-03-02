@@ -48,8 +48,9 @@ echo -e "Current branch: ${YELLOW}${CURRENT_BRANCH}${NC}"
 echo ""
 echo -e "  1) Pull from current branch ${YELLOW}(${CURRENT_BRANCH})${NC}"
 echo -e "  2) Switch to ${YELLOW}main${NC} and pull"
+echo -e "  3) Don't pull from remote"
 echo ""
-read -rp "Choose [1/2] (default: 1): " BRANCH_CHOICE
+read -rp "Choose [1/2/3] (default: 1): " BRANCH_CHOICE
 
 case "${BRANCH_CHOICE:-1}" in
   2)
@@ -60,29 +61,34 @@ case "${BRANCH_CHOICE:-1}" in
       exit 1
     fi
     ;;
+  3)
+    echo -e "${YELLOW}⚠ Skipping git pull. Using current local code.${NC}\n"
+    TARGET_BRANCH="$CURRENT_BRANCH"
+    ;;
   *)
     TARGET_BRANCH="$CURRENT_BRANCH"
     ;;
 esac
 
-# Attempt pull; if object errors occur, do a fetch + reset instead
-echo -e "Pulling latest from origin/${TARGET_BRANCH}..."
-if ! git pull origin "$TARGET_BRANCH" 2>&1; then
-  echo -e "${YELLOW}⚠ Standard pull failed (possibly corrupted objects). Attempting fetch + reset...${NC}"
-  git fetch --all
-  if git reset --hard "origin/${TARGET_BRANCH}"; then
-    echo -e "${GREEN}✔ Reset to origin/${TARGET_BRANCH} succeeded.${NC}"
-  else
-    echo -e "${RED}✘ Could not sync with origin/${TARGET_BRANCH}. Check your git remote and try:${NC}"
-    echo -e "    git remote prune origin"
-    echo -e "    git fetch --all"
-    echo -e "    git reset --hard origin/${TARGET_BRANCH}"
-    exit 1
+if [ "${BRANCH_CHOICE:-1}" != "3" ]; then
+  # Attempt pull; if object errors occur, do a fetch + reset instead
+  echo -e "Pulling latest from origin/${TARGET_BRANCH}..."
+  if ! git pull origin "$TARGET_BRANCH" 2>&1; then
+    echo -e "${YELLOW}⚠ Standard pull failed (possibly corrupted objects). Attempting fetch + reset...${NC}"
+    git fetch --all
+    if git reset --hard "origin/${TARGET_BRANCH}"; then
+      echo -e "${GREEN}✔ Reset to origin/${TARGET_BRANCH} succeeded.${NC}"
+    else
+      echo -e "${RED}✘ Could not sync with origin/${TARGET_BRANCH}. Check your git remote and try:${NC}"
+      echo -e "    git remote prune origin"
+      echo -e "    git fetch --all"
+      echo -e "    git reset --hard origin/${TARGET_BRANCH}"
+      exit 1
+    fi
   fi
+
+  echo -e "${GREEN}✔ Repository up to date on branch: ${TARGET_BRANCH}${NC}\n"
 fi
-
-echo -e "${GREEN}✔ Repository up to date on branch: ${TARGET_BRANCH}${NC}\n"
-
 
 # ============================================================
 # STEP 2: Ask which module(s) to build
@@ -120,8 +126,6 @@ fi
 
 # ============================================================
 # STEP 3: Merge .env files
-#   Combines env.general + module-specific .env into one
-#   temporary .env that docker-compose picks up.
 # ============================================================
 echo -e "\n${CYAN}Merging environment files...${NC}"
 
@@ -140,27 +144,14 @@ else
   echo -e "${RED}  ✘ .env.general not found at $REPO_ROOT/.env.general${NC}"
 fi
 
-# Determine which module-specific .env files to load
-# If ALL modules selected, load all; otherwise load matching ones
-if [[ "${CHOICES[0]}" == "0" ]]; then
-  MODULE_INDICES=("${!MODULES[@]}")
-else
-  MODULE_INDICES=()
-  for choice in "${CHOICES[@]}"; do
-    idx=$((choice-1))
-    if [[ $idx -ge 0 && $idx -lt ${#MODULES[@]} ]]; then
-      MODULE_INDICES+=("$idx")
-    fi
-  done
-fi
-
-for idx in "${MODULE_INDICES[@]}"; do
-  MODULE_ENV="$REPO_ROOT/.env.${MODULES[$idx]}"
+# Always load ALL module .env files (Docker Compose parses all services at startup)
+for MODULE in "${MODULES[@]}"; do
+  MODULE_ENV="$REPO_ROOT/.env.${MODULE}"
   if [[ -f "$MODULE_ENV" ]]; then
-    echo "# === .env.${MODULES[$idx]} ===" >> "$MERGED_ENV"
+    echo "# === .env.${MODULE} ===" >> "$MERGED_ENV"
     cat "$MODULE_ENV" >> "$MERGED_ENV"
     echo "" >> "$MERGED_ENV"
-    echo -e "${GREEN}  ✔ Loaded .env.${MODULES[$idx]}${NC}"
+    echo -e "${GREEN}  ✔ Loaded .env.${MODULE}${NC}"
   else
     echo -e "${YELLOW}  ⚠ No module env found: $MODULE_ENV (skipping)${NC}"
   fi
@@ -175,20 +166,14 @@ echo -e "${CYAN}========================================${NC}"
 echo -e "${CYAN}  Building and starting services...${NC}"
 echo -e "${CYAN}========================================${NC}"
 
-# Export merged env path so compose can reference it
-export ENV_FILE="$MERGED_ENV"
-
-# Build the --env-file flag and service list for docker compose
-ENV_FILE_FLAG="--env-file $MERGED_ENV"
-
-docker compose -f "$COMPOSE_FILE" $ENV_FILE_FLAG \
+docker compose -f "$COMPOSE_FILE" --env-file "$MERGED_ENV" \
   up -d --build "${SELECTED_SERVICES[@]}"
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  ✔ Done! Running containers:${NC}"
 echo -e "${GREEN}========================================${NC}"
-docker compose -f "$COMPOSE_FILE" ps "${SELECTED_SERVICES[@]}"
+docker compose -f "$COMPOSE_FILE" --env-file "$MERGED_ENV" ps "${SELECTED_SERVICES[@]}"  # ← add --env-file here
 
 # ============================================================
 # STEP 5: Optionally push images to Docker Hub
@@ -207,7 +192,7 @@ if [[ "$PUSH_CHOICE" == "y" || "$PUSH_CHOICE" == "Y" ]]; then
     docker login || { echo -e "${RED}✘ Docker login failed. Aborting push.${NC}"; exit 1; }
   fi
 
-  docker compose -f "$COMPOSE_FILE" $ENV_FILE_FLAG push "${SELECTED_SERVICES[@]}"
+docker compose -f "$COMPOSE_FILE" --env-file "$MERGED_ENV" push "${SELECTED_SERVICES[@]}"
 
   echo ""
   echo -e "${GREEN}✔ Images pushed successfully.${NC}"
