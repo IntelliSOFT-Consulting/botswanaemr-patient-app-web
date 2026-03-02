@@ -12,13 +12,13 @@ RUN mvn clean package -DskipTests
 
 # Stage 2: Production image
 FROM amazoncorretto:11
-WORKDIR /app
+WORKDIR /botswana_emr_authentication_java_backend
 
 # Expose port
 EXPOSE 8081
 
 # Copy built JAR from build stage
-COPY --from=build /app/target/BotswanaEMRAuthentication-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/BotswanaEMRAuthentication.jar app.jar
 
 # Run the JAR
 ENTRYPOINT ["java","-jar","app.jar"]

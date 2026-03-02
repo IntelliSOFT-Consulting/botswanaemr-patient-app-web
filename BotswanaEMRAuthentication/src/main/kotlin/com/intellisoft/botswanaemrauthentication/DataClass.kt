@@ -209,13 +209,15 @@ data class Encounter(
 data class CareSetting(
     val display: String
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbDrugs(
-    val results : List<DbDrugsResults>
+    val results : List<DbDrugsResults>? = null
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class DbDrugsResults(
-    val uuid: String,
-    val display: String,
-    val type: String?
+    val uuid: String? = null,
+    val display: String? = null,
+    val type: String? = null
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class DbAllergyResults(
@@ -225,6 +227,7 @@ data class DbAllergyResults(
 data class DbAllergyData(
     val display: String? = null,
     val comment: String? = null,
+    val severity: String? = null,
     val uuid: String? = null,
     val reactions: List<DbAllergyReactions>? = null
 )
@@ -363,7 +366,10 @@ data class DbResultsData(
 
 data class DbAllergyDataResults(
     val name: String,
-    val reactions: List<String>
+    val reactions: List<String>,
+    val severity: String,
+    val dateIdentified: String,
+
 )
 data class DbConditionDataResults(
     val name: String?,
@@ -401,19 +407,15 @@ data class DbVitalLocation(
     val display: String?
 )
 
-data class DbVisitResponse(
-    val results: List<DbVisitRaw>?
-)
-
-data class DbVisitRaw(
-    val uuid: String?,
-    val display: String?,
-    val startDatetime: String?,
-    val stopDatetime: String?,
-    val location: DbVitalLocation?,
-    val visitType: DbVisitType?,
-    val encounters: List<DbEncounterRaw>?
-)
+//data class DbVisitRaw(
+//    val uuid: String?,
+//    val display: String?,
+//    val startDatetime: String?,
+//    val stopDatetime: String?,
+//    val location: DbVitalLocation?,
+//    val visitType: DbVisitType?,
+//    val encounters: List<DbEncounterRaw>?
+//)
 
 data class DbVisitType(
     val uuid: String?,
@@ -431,14 +433,6 @@ data class DbEncounterRaw(
 data class DbEncounterType(
     val uuid: String?,
     val display: String?
-)
-
-data class DbVitalDataResults(
-    val conceptName: String?,
-    val value: String?,
-    val unit: String?,
-    val dateRecorded: String?,
-    val encounter: String?
 )
 
 data class VisitEncounterSummary(
@@ -533,4 +527,161 @@ data class Coding(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Recorder(
     val display: String? = null
+)
+
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class DbVisitResponse(
+    @JsonProperty("results")
+    val results: List<VisitResponse>? = null
+)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VisitResponse(
+
+    @JsonProperty("uuid")
+    val uuid: String? = null,
+
+    @JsonProperty("display")
+    val display: String? = null,
+
+    @JsonProperty("visitType")
+    val visitType: VisitType? = null,
+
+    @JsonProperty("location")
+    val location: Location? = null,
+
+    @JsonProperty("startDatetime")
+    val startDatetime: String? = null,
+
+    @JsonProperty("stopDatetime")
+    val stopDatetime: String? = null,
+
+    @JsonProperty("auditInfo")
+    val auditInfo: AuditInfo? = null
+) {
+
+    /**
+     * Controlled final compiled output.
+     * This ensures downstream layers do not depend on nested structures.
+     */
+    fun toSimpleVisit(): SimpleVisit {
+        return SimpleVisit(
+            uuid = uuid,
+            display = display,
+            visitTypeDisplay = visitType?.display,
+            locationDisplay = location?.display,
+            startDatetime = startDatetime,
+            stopDatetime = stopDatetime,
+            auditorDisplay = auditInfo?.creator?.display
+        )
+    }
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VisitType(
+    @JsonProperty("display")
+    val display: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Location(
+    @JsonProperty("display")
+    val display: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class AuditInfo(
+    @JsonProperty("creator")
+    val creator: Creator? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Creator(
+    @JsonProperty("display")
+    val display: String? = null
+)
+
+/**
+ * Final flattened structure for UI / Domain consumption.
+ */
+data class SimpleVisit(
+    val uuid: String?,
+    val display: String?,
+    val visitTypeDisplay: String?,
+    val locationDisplay: String?,
+    val startDatetime: String?,
+    val stopDatetime: String?,
+    val auditorDisplay: String?
+)
+
+//Vitals
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VitalsResponse(
+    val results: List<VitalObservationResult> = emptyList()
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VitalObservationResult(
+    val uuid: String? = null,
+    val display: String? = null,
+    val obsDatetime: String? = null,
+    val location: VitalLocation? = null,
+    val encounter: VitalEncounter? = null,
+    val status: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VitalLocation(
+    val display: String? = null,
+    val name: String? = null,
+    val country: String? = null,
+    val countyDistrict: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VitalEncounter(
+    val encounterDatetime: String? = null,
+    val encounterType: EncounterType? = null,
+    val obs: List<Obs>? = null,
+    val encounterProviders: List<EncounterProvider>? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EncounterType(
+    val display: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Obs(
+    val display: String? = null
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EncounterProvider(
+    val display: String? = null
+)
+
+data class PatientVitalDTO(
+    val conceptName: String,
+    val value: String,
+    val unit: String,
+    val dateRecorded: String,
+    val encounterType: String,
+    val encounter: String,
+    val encounterProvider: String?,
+    val location: String?
+)
+data class DbVitalDataResults(
+    val conceptName: String?,
+    val value: String?,
+    val unit: String?,
+    val dateRecorded: String?,
+    val encounter: String?
+)
+data class DbMedicalHistoryData(
+    val allergies : List<DbAllergyDataResults> = emptyList(),
+    val conditions: List<DbConditionDataResults>     = emptyList(),
+    val drugs     : List<DbDrugsResults>       = emptyList(),
+    val vitals    : List<PatientVitalDTO>      = emptyList(),
+    val visits    : List<VisitSummary>         = emptyList()
 )

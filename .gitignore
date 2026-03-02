@@ -53,8 +53,7 @@ Thumbs.db
 
 
 # environment variables
-.env
+.env.*
 *.env
-!.env.example
 
 certs

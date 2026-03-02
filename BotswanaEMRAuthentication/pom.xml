@@ -183,6 +183,14 @@
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
 
+        <!-- Source: https://mvnrepository.com/artifact/org.projectlombok/lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.42</version>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>
@@ -278,7 +286,7 @@
                 </executions>
             </plugin>
         </plugins>
-        <finalName>BotswanaEMRAuthentication-0.0.1-SNAPSHOT</finalName>
+        <finalName>BotswanaEMRAuthentication</finalName>
     </build>
 
 

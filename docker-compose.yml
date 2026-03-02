@@ -1,5 +1,10 @@
+version: "3.8"
+
 networks:
   emr_network:
+
+#volumes:
+#  postgres_data:
 
 services:
   nginx:
@@ -27,85 +32,85 @@ services:
 
   authservice:
     container_name: authservice
-    # image: intellisoftdev/botswana_emr_auth_image:v3
+    image: intellisoftdev/botswana_emr_auth_image:latest
     build:
-      context: ../BotswanaEMRAuthentication
+      context: ./BotswanaEMRAuthentication
       dockerfile: Dockerfile
     restart: always
     ports:
       - "8081:8081"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   fileservice:
     container_name: fileservice
-    # image: dnjau/botswana_emr_file_storage_image:v2
+    image: intellisoftdev/botswana_emr_file_storage_image:latest
     build:
-      context: ../BotswanaEMRFileStorage
+      context: ./BotswanaEMRFileStorage
       dockerfile: Dockerfile
     restart: always
     ports:
       - "7003:7003"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   ambulanceservice:
     container_name: ambulanceservice
-    # image: dnjau/botswana_emr_ambulance_image:v2
+    image: intellisoftdev/botswana_emr_ambulance_image:latest
     build:
-      context: ../BotswanaEMRAmbulance
+      context: ./BotswanaEMRAmbulance
       dockerfile: Dockerfile
     restart: always
     ports:
       - "7002:7002"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   facilityservice:
     container_name: facilityservice
-    # image: dnjau/botswana_emr_facility_image:1
+    image: intellisoftdev/botswana_emr_facility_image:latest
     build:
-      context: ../BotswanaEMRFacility
+      context: ./BotswanaEMRFacility
       dockerfile: Dockerfile
     restart: always
     ports:
       - "7000:7000"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   appointmentservice:
     container_name: appointmentservice
-    # image: dnjau/botswana_emr_appointments_image:v2
+    image: intellisoftdev/botswana_emr_appointments_image:latest
     build:
-      context: ../BotswanaEMRAppointments
+      context: ./BotswanaEMRAppointments
       dockerfile: Dockerfile
     restart: always
     ports:
       - "8082:8082"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
   notificationservice:
     container_name: notificationservice
-    # image: dnjau/botswana_emr_notifications_image:v1
+    image: intellisoftdev/botswana_emr_notifications_image:latest
     build:
-      context: ../BotswanaEMRNotifications
+      context: ./BotswanaEMRNotifications
       dockerfile: Dockerfile
     restart: always
     ports:
       - "7001:7001"
     env_file:
-      - ../.env
+      - .env.merged
     networks:
       - emr_network
 
@@ -127,3 +132,19 @@ services:
     command: ["start-dev"]
     networks:
       - emr_network
+
+#  postgres:
+#    image: postgres:15
+#    container_name: postgres
+#    restart: always
+#    environment:
+#      POSTGRES_USER:
+#      POSTGRES_PASSWORD:
+#      POSTGRES_DB: postgres
+#      POSTGRES_MAX_CONNECTIONS: 200
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#    networks:
+#      - emr_network

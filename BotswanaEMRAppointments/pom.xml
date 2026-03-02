@@ -272,7 +272,7 @@
                 </executions>
             </plugin>
         </plugins>
-        <finalName>BotswanaEMRAppointments-0.0.1-SNAPSHOT</finalName>
+        <finalName>BotswanaEMRAppointments</finalName>
 
     </build>
 
