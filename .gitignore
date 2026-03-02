@@ -57,3 +57,7 @@ Thumbs.db
 *.env
 
 certs
+
+.claude/
+
+.claude/worktrees/

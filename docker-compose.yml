@@ -38,7 +38,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "8081:8081"
+      - "${AUTH_HOST_PORT}:${AUTH_SERVER_PORT}"
     env_file:
       - .env.merged
     networks:
@@ -52,7 +52,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "7003:7003"
+      - "${FILESTORAGE_HOST_PORT}:${FILESTORAGE_SERVER_PORT}"
     env_file:
       - .env.merged
     networks:
@@ -66,7 +66,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "7002:7002"
+      - "${AMBULANCE_HOST_PORT}:${AMBULANCE_SERVER_PORT}"
     env_file:
       - .env.merged
     networks:
@@ -80,7 +80,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "7000:7000"
+      - "${FACILITY_HOST_PORT}:${FACILITY_SERVER_PORT}"
     env_file:
       - .env.merged
     networks:
@@ -94,7 +94,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "8082:8082"
+      - "${APPOINTMENTS_HOST_PORT}:${APPOINTMENTS_SERVER_PORT}"
     env_file:
       - .env.merged
     networks:
@@ -108,7 +108,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "7001:7001"
+      - "${NOTIFICATIONS_HOST_PORT}:${NOTIFICATIONS_SERVER_PORT}"
     env_file:
       - .env.merged
     networks:
