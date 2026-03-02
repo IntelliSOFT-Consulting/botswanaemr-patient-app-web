@@ -15,7 +15,7 @@ FROM amazoncorretto:11
 WORKDIR /botswana_emr_appointments_java_backend
 
 # Expose port
-EXPOSE 8082
+#EXPOSE 8082
 
 # Copy built JAR from build stage
 COPY --from=build /app/target/BotswanaEMRAppointments.jar app.jar

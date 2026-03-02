@@ -15,7 +15,7 @@ FROM amazoncorretto:11
 WORKDIR /botswana_emr_notification_java_backend
 
 # Expose port
-EXPOSE 7001
+#EXPOSE 7001
 
 # Copy built JAR from build stage
 COPY --from=build /app/target/BotswanaEMRNotifications.jar app.jar

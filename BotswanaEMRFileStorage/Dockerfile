@@ -15,7 +15,7 @@ FROM amazoncorretto:11
 WORKDIR /botswana_emr_file_storage_java_backend
 
 # Expose port
-EXPOSE 7003
+#EXPOSE 7003
 
 # Copy built JAR from build stage
 COPY --from=build /app/target/FileStorage.jar app.jar

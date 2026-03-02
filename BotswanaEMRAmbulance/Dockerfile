@@ -15,7 +15,7 @@ FROM amazoncorretto:11
 WORKDIR /botswana_emr_ambulance_java_backend
 
 # Expose port
-EXPOSE 7002
+#EXPOSE 7002
 
 # Copy built JAR from build stage
 COPY --from=build /app/target/BotswanaEMRAmbulance.jar app.jar
