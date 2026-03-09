@@ -55,6 +55,7 @@ Thumbs.db
 # environment variables
 .env.*
 *.env
+generate-env.sh
 
 certs
 

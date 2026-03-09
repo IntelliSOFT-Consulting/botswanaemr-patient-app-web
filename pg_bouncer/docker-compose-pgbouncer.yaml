@@ -52,3 +52,4 @@ services:
 networks:
   emr_network:
     external: true
+    name: docker_emr_network
