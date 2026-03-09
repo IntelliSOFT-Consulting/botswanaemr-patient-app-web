@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - "${PG_BOUNCER_HOST_PORT}:${PG_BOUNCER_SERVER_PORT}"            # Apps connect on 5433 → PgBouncer → PostgreSQL :5432
+      - "${PG_BOUNCER_HOST_PORT}:${PG_BOUNCER_DB_PORT}"            # Apps connect on 5433 → PgBouncer → PostgreSQL :5432
 
     volumes:
       # Paths are relative to this file (pg_bouncer/ folder)
