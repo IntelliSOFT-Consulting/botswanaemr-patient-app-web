@@ -1,0 +1,54 @@
+# =============================================================================
+# PgBouncer — Connection Pooler for BotswanaEMR Microservices
+#
+# Databases managed:
+#   - bitri_ambulance     (BotswanaEMRAmbulance)
+#   - authentication      (BotswanaEMRAuthentication)
+#   - facility            (BotswanaEMRFacility)
+#   - file_storage        (BotswanaEMRFileStorage)
+#   - bitri_notifications (BotswanaEMRNotifications)
+#
+# Before starting:
+#   1. From root: ./generate_userlist.sh → Option [1] to create pg_bouncer/userlist.txt
+#   2. Start:     docker compose -f pg_bouncer/docker-compose-pgbouncer.yaml up -d
+#
+# Microservices connect to:
+#   jdbc:postgresql://<this-host>:5433/<dbname>?prepareThreshold=0
+# =============================================================================
+
+services:
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.24.1-p0
+    container_name: spring_pgbouncer
+    restart: unless-stopped
+
+    ports:
+      - "5433:5432"             # Apps connect on 5433 → PgBouncer → PostgreSQL :5432
+
+    volumes:
+      # Paths are relative to this file (pg_bouncer/ folder)
+      - ./pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./userlist.txt:/etc/pgbouncer/userlist.txt:ro
+
+    env_file:
+      - ../.env.general         # Reads SPRING_DATABASE_* vars for reference
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U intellisoft"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - emr_network
+
+networks:
+  emr_network:
+    external: true
