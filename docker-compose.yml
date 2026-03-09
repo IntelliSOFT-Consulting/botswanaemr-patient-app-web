@@ -123,15 +123,15 @@ services:
     networks:
       - emr_network
 
-  keycloak:
-    container_name: keycloak
-    image: quay.io/keycloak/keycloak:latest
-    restart: always
-    env_file:
-      - keycloak.env
-    command: ["start-dev"]
-    networks:
-      - emr_network
+#  keycloak:
+#    container_name: keycloak
+#    image: quay.io/keycloak/keycloak:latest
+#    restart: always
+#    env_file:
+#      - keycloak.env
+#    command: ["start-dev"]
+#    networks:
+#      - emr_network
 
 #  postgres:
 #    image: postgres:15
