@@ -17,11 +17,29 @@ class FormatterClass {
         val inputStream = javaClass.classLoader
             .getResourceAsStream("application.properties")
         props.load(inputStream)
-        val username = props.getProperty("openmrs.username")
-        val password = props.getProperty("openmrs.password")
-        val url = props.getProperty("openmrs.url")
+        val username = resolveProperty(props.getProperty("openmrs.username"))
+        val password = resolveProperty(props.getProperty("openmrs.password"))
+        val url = resolveProperty(props.getProperty("openmrs.url"))
 
         return DbAppValues( username, password, url)
+    }
+
+    /**
+     * Resolves ${ENV_VAR} or ${ENV_VAR:default} placeholders from environment variables.
+     */
+    private fun resolveProperty(value: String?): String {
+        if (value == null) return ""
+        val pattern = Pattern.compile("\\$\\{([^}]+)}")
+        val matcher = pattern.matcher(value)
+        val sb = StringBuffer()
+        while (matcher.find()) {
+            val placeholder = matcher.group(1)
+            val parts = placeholder.split(":", limit = 2)
+            val envValue = System.getenv(parts[0]) ?: if (parts.size > 1) parts[1] else ""
+            matcher.appendReplacement(sb, envValue.replace("\\", "\\\\").replace("\$", "\\\$"))
+        }
+        matcher.appendTail(sb)
+        return sb.toString()
     }
 
     //Convert date to string
