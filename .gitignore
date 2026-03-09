@@ -60,6 +60,7 @@ certs
 
 # PgBouncer credentials
 pg_bouncer/userlist.txt
+pg_bouncer/pgbouncer.ini
 
 .claude/
 
