@@ -92,6 +92,54 @@ server.ssl.keyStoreType=PKCS12
     Notifications Service: http://botswananotification:7001
 ```
 
+## PgBouncer (Connection Pooling)
+
+PgBouncer sits between the microservices and PostgreSQL to pool and reuse database connections.
+
+**Databases managed:**
+- `bitri_ambulance` — BotswanaEMRAmbulance
+- `authentication` — BotswanaEMRAuthentication
+- `facility` — BotswanaEMRFacility
+- `file_storage` — BotswanaEMRFileStorage
+- `bitri_notifications` — BotswanaEMRNotifications
+
+**Configuration:** `pg_bouncer/pgbouncer.ini`
+- Pool mode: `transaction`
+- Max client connections: `200`
+- Default pool size per database: `10`
+- Auth: `scram-sha-256`
+
+### Setup
+
+1. **Generate the userlist file** (fetches SCRAM-SHA-256 hashes from PostgreSQL):
+   ```shell
+   ./pg_bouncer/generate_userlist.sh
+   # Choose option [1] to generate pg_bouncer/userlist.txt
+   ```
+
+2. **Start PgBouncer:**
+   ```shell
+   docker compose -f pg_bouncer/docker-compose-pgbouncer.yaml up -d
+   ```
+
+3. **Connect microservices** using port `5433` with `prepareThreshold=0`:
+   ```
+   jdbc:postgresql://<pgbouncer-host>:5433/<dbname>?prepareThreshold=0
+   ```
+
+### Useful Commands
+
+```shell
+# Check PgBouncer status
+docker logs spring_pgbouncer
+
+# Regenerate userlist and restart PgBouncer
+./pg_bouncer/generate_userlist.sh   # Choose option [3]
+
+# Reset a database user's password to SCRAM-SHA-256
+./pg_bouncer/generate_userlist.sh   # Choose option [2]
+```
+
 ## Copyright
 
 Released under the Apache License 2.0. See the [LICENSE](https://github.com/codecentric/springboot-sample-app/blob/master/LICENSE) file.

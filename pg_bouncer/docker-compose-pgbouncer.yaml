@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - "5433:5432"             # Apps connect on 5433 → PgBouncer → PostgreSQL :5432
+      - "${PG_BOUNCER_HOST_PORT}:${PG_BOUNCER_SERVER_PORT}"            # Apps connect on 5433 → PgBouncer → PostgreSQL :5432
 
     volumes:
       # Paths are relative to this file (pg_bouncer/ folder)
@@ -34,7 +34,7 @@ services:
       - ../.env.general         # Reads SPRING_DATABASE_* vars for reference
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U intellisoft"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $${SPRING_DATABASE_USERNAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -47,9 +47,8 @@ services:
         max-file: "3"
 
     networks:
-      - emr_network
+      - docker_emr_network
 
 networks:
-  emr_network:
+  docker_emr_network:
     external: true
-    name: docker_emr_network
